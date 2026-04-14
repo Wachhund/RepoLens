@@ -286,7 +286,7 @@ echo ""
 
 echo "Test $test_num: no negation patterns override sensitive file exclusions"
 TOTAL=$((TOTAL + 1))
-if echo "$gitignore_content" | grep -qP '^!\.(env|pem|key|p12|jks|keystore|pfx)|^!.*credentials|^!.*secrets'; then
+if echo "$gitignore_content" | grep -vP '^!\.env\.example$' | grep -qP '^!\.(env|pem|key|p12|jks|keystore|pfx)|^!.*credentials|^!.*secrets'; then
   FAIL=$((FAIL + 1))
   echo "  FAIL: found negation pattern that could re-include sensitive files"
 else

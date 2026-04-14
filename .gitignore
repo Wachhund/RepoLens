@@ -9,6 +9,7 @@ logs/
 # Sensitive files — prevent accidental secret commits
 .env
 .env.*
+!.env.example
 *.pem
 *.key
 *.p12
