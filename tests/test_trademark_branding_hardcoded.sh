@@ -130,7 +130,7 @@ echo "Test 7: Step 8 mentions domain references or forks"
 step8_line="$(grep -n '^8\.' "$LENS_FILE" 2>/dev/null || true)"
 step8_content="$(echo "$step8_line" | tr '[:upper:]' '[:lower:]')"
 TOTAL=$((TOTAL + 1))
-if echo "$step8_content" | grep -qiE 'domain|fork|inherit|brand|reference'; then
+if grep -qiE 'domain|fork|inherit|brand|reference' <<< "$step8_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: step 8 addresses domain references or fork-related branding"
 else
@@ -152,7 +152,7 @@ step8_full="$(sed -n '/^8\./,/^[0-9]\./p' "$LENS_FILE" | head -5)"
 TOTAL=$((TOTAL + 1))
 # It should either use template variables like {{REPO_OWNER}}/{{REPO_NAME}},
 # or instruct the agent to derive terms dynamically, or use generic placeholders
-if echo "$step8_full" | grep -qiE '(REPO_OWNER|REPO_NAME|project.name|org.name|<project|<org|<author|Identify.*project.*name|Identify.*org|derive|determine|discover|README|package.*manifest|git.*remote)'; then
+if grep -qiE '(REPO_OWNER|REPO_NAME|project.name|org.name|<project|<org|<author|Identify.*project.*name|Identify.*org|derive|determine|discover|README|package.*manifest|git.*remote)' <<< "$step8_full"; then
   PASS=$((PASS + 1))
   echo "  PASS: step 8 uses a generic/dynamic approach"
 else
@@ -235,7 +235,7 @@ echo ""
 echo "Test 20: trademark-branding is in open-source-readiness domain lenses"
 osr_lenses="$(jq -r '.domains[] | select(.id == "open-source-readiness") | .lenses[]' "$DOMAINS_FILE")"
 TOTAL=$((TOTAL + 1))
-if echo "$osr_lenses" | grep -q '^trademark-branding$'; then
+if grep -q '^trademark-branding$' <<< "$osr_lenses"; then
   PASS=$((PASS + 1))
   echo "  PASS: trademark-branding registered in open-source-readiness"
 else
@@ -253,7 +253,7 @@ echo ""
 
 echo "Test 21: Step 8 still references grep or search functionality"
 TOTAL=$((TOTAL + 1))
-if echo "$step8_full" | grep -qiE '(grep|search|find.*term|look.*for)'; then
+if grep -qiE '(grep|search|find.*term|look.*for)' <<< "$step8_full"; then
   PASS=$((PASS + 1))
   echo "  PASS: step 8 retains search/grep functionality"
 else
@@ -316,7 +316,7 @@ echo ""
 
 echo "Test 26: Step 8 grep uses {{REPO_OWNER}} template variable (double braces)"
 TOTAL=$((TOTAL + 1))
-if echo "$step8_full" | grep -qF '{{REPO_OWNER}}'; then
+if grep -qF '{{REPO_OWNER}}' <<< "$step8_full"; then
   PASS=$((PASS + 1))
   echo "  PASS: step 8 grep contains {{REPO_OWNER}} template variable"
 else
@@ -328,7 +328,7 @@ fi
 echo ""
 echo "Test 27: Step 8 grep uses {{REPO_NAME}} template variable (double braces)"
 TOTAL=$((TOTAL + 1))
-if echo "$step8_full" | grep -qF '{{REPO_NAME}}'; then
+if grep -qF '{{REPO_NAME}}' <<< "$step8_full"; then
   PASS=$((PASS + 1))
   echo "  PASS: step 8 grep contains {{REPO_NAME}} template variable"
 else
@@ -347,7 +347,7 @@ echo ""
 
 echo "Test 28: Step 8 instructs agent to search for additional brand terms beyond template variables"
 TOTAL=$((TOTAL + 1))
-if echo "$step8_full" | grep -qiE 'additional.*brand|brand.*term|product.*name|domain.*name|author.*handle'; then
+if grep -qiE 'additional.*brand|brand.*term|product.*name|domain.*name|author.*handle' <<< "$step8_full"; then
   PASS=$((PASS + 1))
   echo "  PASS: step 8 includes instruction for additional brand term discovery"
 else
@@ -366,7 +366,7 @@ echo ""
 
 echo "Test 29: Step 8 grep includes --include file filter"
 TOTAL=$((TOTAL + 1))
-if echo "$step8_full" | grep -qF -- '--include='; then
+if grep -qF -- '--include=' <<< "$step8_full"; then
   PASS=$((PASS + 1))
   echo "  PASS: step 8 grep retains --include file filter"
 else

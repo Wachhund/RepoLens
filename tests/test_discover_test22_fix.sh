@@ -173,7 +173,7 @@ if [[ -n "$grep_line" ]]; then
   mode_line="$(grep 'audit|feature|bugfix|discover' "$SCRIPT_DIR/repolens.sh")"
   # Simulate: does the grep from test 27 match the actual line?
   # We test this indirectly: the pattern must handle discover followed by | (not just ))
-  if echo "$mode_line" | grep -q '|discover|'; then
+  if grep -q '|discover|' <<< "$mode_line"; then
     # discover IS mid-list in actual code — test 27's pattern must handle this
     PASS=$((PASS + 1))
     echo "  PASS: discover is mid-list in repolens.sh mode validation (pattern must handle this)"
@@ -196,7 +196,7 @@ test_output="$(bash "$TEST_FILE" 2>&1 || true)"
 # Test 22 produces multiple assertion lines — check for any FAILs in the test 22 block
 test22_output="$(echo "$test_output" | sed -n '/Test 22:/,/Test 23:/p')"
 TOTAL=$((TOTAL + 1))
-if echo "$test22_output" | grep -q 'FAIL'; then
+if grep -q 'FAIL' <<< "$test22_output"; then
   FAIL=$((FAIL + 1))
   echo "  FAIL: test 22 has failing assertions in test_discover_mode.sh"
   echo "$test22_output" | grep 'FAIL' | while read -r line; do
@@ -215,7 +215,7 @@ echo ""
 echo "Test 17: test 27 must pass in test_discover_mode.sh"
 test27_output="$(echo "$test_output" | sed -n '/Test 27:/,/Test 28:/p')"
 TOTAL=$((TOTAL + 1))
-if echo "$test27_output" | grep -q 'FAIL'; then
+if grep -q 'FAIL' <<< "$test27_output"; then
   FAIL=$((FAIL + 1))
   echo "  FAIL: test 27 fails in test_discover_mode.sh"
   echo "$test27_output" | grep 'FAIL' | while read -r line; do
@@ -234,7 +234,7 @@ echo ""
 echo "Test 18: test_discover_mode.sh must report 0 failures"
 results_line="$(echo "$test_output" | grep 'Results:')"
 TOTAL=$((TOTAL + 1))
-if echo "$results_line" | grep -q '0 failed'; then
+if grep -q '0 failed' <<< "$results_line"; then
   PASS=$((PASS + 1))
   echo "  PASS: test_discover_mode.sh reports 0 failures"
   echo "    $results_line"

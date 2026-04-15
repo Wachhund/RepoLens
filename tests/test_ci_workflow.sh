@@ -74,9 +74,17 @@ assert_not_contains() {
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
   # Use here-string to avoid SIGPIPE with pipefail when grep -q exits early on large input
-  if grep -qP -- "$pattern" <<< "$haystack"; then
+  if grep $flags -- "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -153,7 +161,7 @@ if [[ -f "$CI_WORKFLOW" ]]; then
     fi
   else
     # Fallback: check for basic YAML structure markers
-    if echo "$ci_content" | grep -qP '^name:' && echo "$ci_content" | grep -qP '^on:' && echo "$ci_content" | grep -qP '^jobs:'; then
+    if grep -qE '^name:' <<< "$ci_content" && grep -qE '^on:' <<< "$ci_content" && grep -qE '^jobs:' <<< "$ci_content"; then
       PASS=$((PASS + 1))
       echo "  PASS: ci.yml has basic YAML structure (name/on/jobs)"
     else
@@ -179,7 +187,7 @@ echo "--- Section 2: Trigger configuration ---"
 echo ""
 
 echo "Test 5: Workflow triggers on push"
-assert_matches "triggers on push" "^\s*push:" "$ci_content"
+assert_matches "triggers on push" "^[[:space:]]*push:" "$ci_content"
 
 echo ""
 echo "Test 6: Push trigger includes master branch"
@@ -187,7 +195,7 @@ assert_matches "push trigger includes master" "branches:.*master" "$ci_content"
 
 echo ""
 echo "Test 7: Workflow triggers on pull_request"
-assert_matches "triggers on pull_request" "^\s*pull_request:" "$ci_content"
+assert_matches "triggers on pull_request" "^[[:space:]]*pull_request:" "$ci_content"
 
 # =====================================================================
 # Section 3: ShellCheck job
@@ -212,7 +220,7 @@ if [[ -f "$CI_WORKFLOW" ]]; then
   if [[ -z "$shellcheck_block" ]]; then
     shellcheck_block="$(echo "$ci_content" | sed -n '/shellcheck:/,$ p' | head -20)"
   fi
-  if echo "$shellcheck_block" | grep -q 'ubuntu-latest'; then
+  if grep -q 'ubuntu-latest' <<< "$shellcheck_block"; then
     PASS=$((PASS + 1))
     echo "  PASS: ShellCheck job uses ubuntu-latest"
   else
@@ -253,7 +261,7 @@ echo "--- Section 4: Test job ---"
 echo ""
 
 echo "Test 15: Workflow has a test job"
-assert_matches "has test job" "(?i)^\s+test:" "$ci_content"
+assert_matches "has test job" "(?i)^[[:space:]]+test:" "$ci_content"
 
 echo ""
 echo "Test 16: Test job uses ubuntu-latest"
@@ -265,7 +273,7 @@ if [[ -f "$CI_WORKFLOW" ]]; then
   if [[ -z "$test_block" ]]; then
     test_block="$(echo "$ci_content" | sed -n '/^\s\s*test:/,$ p' | head -30)"
   fi
-  if echo "$test_block" | grep -q 'ubuntu-latest'; then
+  if grep -q 'ubuntu-latest' <<< "$test_block"; then
     PASS=$((PASS + 1))
     echo "  PASS: test job uses ubuntu-latest"
   else
@@ -304,7 +312,7 @@ echo "Test 19: Test job runs the test suite"
 # Must either call 'make check' or iterate over tests/test_*.sh
 TOTAL=$((TOTAL + 1))
 if [[ -f "$CI_WORKFLOW" ]]; then
-  if echo "$ci_content" | grep -qP 'make check|tests/test_\*\.sh|test_\*\.sh'; then
+  if grep -qE 'make check|tests/test_\*\.sh|test_\*\.sh' <<< "$ci_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: test job runs the test suite (make check or test glob)"
   else
@@ -329,7 +337,7 @@ TOTAL=$((TOTAL + 1))
 if [[ -f "$CI_WORKFLOW" ]]; then
   # Count top-level job keys under jobs: — there should be at least 2
   # Jobs are indented at 2 spaces under 'jobs:'
-  job_count="$(echo "$ci_content" | grep -cP '^\s{2}[a-zA-Z_-]+:\s*$')"
+  job_count="$(echo "$ci_content" | grep -cE '^[[:space:]]{2}[a-zA-Z_-]+:[[:space:]]*$')"
   if [[ "$job_count" -ge 2 ]]; then
     PASS=$((PASS + 1))
     echo "  PASS: at least 2 separate jobs defined ($job_count found)"
@@ -347,7 +355,7 @@ echo "Test 21: Workflow does not have needs/depends between shellcheck and test"
 # Both jobs should be independent — no 'needs: shellcheck' or 'needs: test'
 TOTAL=$((TOTAL + 1))
 if [[ -f "$CI_WORKFLOW" ]]; then
-  if echo "$ci_content" | grep -qP '^\s+needs:'; then
+  if grep -qE '^[[:space:]]+needs:' <<< "$ci_content"; then
     FAIL=$((FAIL + 1))
     echo "  FAIL: workflow has 'needs:' dependency between jobs (should run in parallel)"
   else
@@ -374,7 +382,7 @@ fi
 
 echo "Test 22: README has a CI badge"
 # Use word boundary to avoid matching 'social' or other words containing 'ci'
-assert_matches "README has CI badge" "\[!\[CI\b" "$readme_content"
+assert_matches "README has CI badge" "\[!\[CI" "$readme_content"
 
 echo ""
 echo "Test 23: CI badge references GitHub Actions workflow"
@@ -392,7 +400,7 @@ echo ""
 echo "Test 26: CI badge appears in the first 10 lines of README"
 TOTAL=$((TOTAL + 1))
 if [[ -f "$SCRIPT_DIR/README.md" ]]; then
-  ci_badge_in_header="$(head -10 "$SCRIPT_DIR/README.md" | grep -ciP 'CI.*badge\.svg|actions/workflows/ci\.yml')"
+  ci_badge_in_header="$(head -10 "$SCRIPT_DIR/README.md" | grep -ciE 'CI.*badge\.svg|actions/workflows/ci\.yml')"
   if [[ "$ci_badge_in_header" -ge 1 ]]; then
     PASS=$((PASS + 1))
     echo "  PASS: CI badge found in first 10 lines"
@@ -470,7 +478,7 @@ echo "Test 34: CONTRIBUTING.md mentions CI running on pull requests"
 TOTAL=$((TOTAL + 1))
 if [[ -f "$SCRIPT_DIR/CONTRIBUTING.md" ]]; then
   # The implementation added a sentence about CI running on PRs with status checks
-  if echo "$contrib_content" | grep -qiP 'CI.*pull.request|pull.request.*CI|automated.*pull.request'; then
+  if grep -qiE 'CI.*pull.request|pull.request.*CI|automated.*pull.request' <<< "$contrib_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: CONTRIBUTING.md mentions CI on pull requests"
   else
@@ -486,7 +494,7 @@ echo ""
 echo "Test 35: CONTRIBUTING.md mentions ShellCheck or automated linting"
 TOTAL=$((TOTAL + 1))
 if [[ -f "$SCRIPT_DIR/CONTRIBUTING.md" ]]; then
-  if echo "$contrib_content" | grep -qiP 'ShellCheck|linting|lint'; then
+  if grep -qiE 'ShellCheck|linting|lint' <<< "$contrib_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: CONTRIBUTING.md mentions ShellCheck/linting"
   else

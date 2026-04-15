@@ -42,8 +42,16 @@ assert_contains() {
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
-  if echo "$haystack" | grep -qP "$pattern"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if grep $flags "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -71,7 +79,7 @@ echo ""
 
 echo "Test 1: .gitignore has a labeled section for sensitive files"
 TOTAL=$((TOTAL + 1))
-if echo "$gitignore_content" | grep -qiP '^#.*sensitive|^#.*secret'; then
+if grep -qiE '^#.*sensitive|^#.*secret' <<< "$gitignore_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: .gitignore has a labeled sensitive files section"
 else
@@ -300,7 +308,7 @@ echo ""
 
 echo "Test $test_num: no negation patterns override sensitive file exclusions"
 TOTAL=$((TOTAL + 1))
-if echo "$gitignore_content" | grep -vP '^!\.env\.example$' | grep -qP '^!\.(env|pem|key|p12|jks|keystore|pfx)|^!.*credentials|^!.*secrets'; then
+if grep -vE '^!\.env\.example$' <<< "$gitignore_content" | grep -qE '^!\.(env|pem|key|p12|jks|keystore|pfx)|^!.*credentials|^!.*secrets'; then
   FAIL=$((FAIL + 1))
   echo "  FAIL: found negation pattern that could re-include sensitive files"
 else
@@ -316,7 +324,7 @@ sensitive_count=0
 for pat in '.env' '.env.*' '*.pem' '*.key' '*.p12' '*.jks' '*.keystore' '*.pfx' \
            'key.properties' 'google-services.json' 'GoogleService-Info.plist' \
            'credentials.json' 'secrets.yaml' 'secrets.yml'; do
-  if echo "$gitignore_content" | grep -qF "$pat"; then
+  if grep -qF "$pat" <<< "$gitignore_content"; then
     sensitive_count=$((sensitive_count + 1))
   fi
 done

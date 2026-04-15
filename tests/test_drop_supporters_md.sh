@@ -52,8 +52,16 @@ assert_not_contains() {
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
-  if echo "$haystack" | grep -qP "$pattern"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if grep $flags "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -65,8 +73,16 @@ assert_matches() {
 
 assert_not_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
-  if ! echo "$haystack" | grep -qP "$pattern"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if ! grep $flags "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -180,7 +196,7 @@ echo ""
 echo "Test 7: README support section does not use bullet-list CTA format"
 TOTAL=$((TOTAL + 1))
 support_section="$(echo "$readme_content" | sed -n '/^## Support$/,/^## /p' | head -n -1)"
-if echo "$support_section" | grep -qP '^\s*-\s+'; then
+if grep -qE '^[[:space:]]*-[[:space:]]+' <<< "$support_section"; then
   FAIL=$((FAIL + 1))
   echo "  FAIL: Support section still contains bullet points"
   echo "    Section content: $(echo "$support_section" | head -5)"
@@ -274,7 +290,7 @@ echo ""
 echo "Test 14: README support section does not enumerate individual names"
 TOTAL=$((TOTAL + 1))
 support_section="$(echo "$readme_content" | sed -n '/^## Support$/,/^## /p' | head -n -1)"
-support_lines="$(echo "$support_section" | grep -cP '\S' 2>/dev/null || echo 0)"
+support_lines="$(echo "$support_section" | grep -cE '[^[:space:]]' 2>/dev/null || echo 0)"
 if [[ "$support_lines" -le 5 ]]; then
   PASS=$((PASS + 1))
   echo "  PASS: Support section is concise ($support_lines non-empty lines) — no name list"
@@ -366,7 +382,7 @@ echo ""
 echo "Test 20: Support section is minimal (single content line)"
 TOTAL=$((TOTAL + 1))
 support_section="$(echo "$readme_content" | sed -n '/^## Support$/,/^## /p' | head -n -1)"
-content_lines="$(echo "$support_section" | grep -cP '^\S' 2>/dev/null || echo 0)"
+content_lines="$(echo "$support_section" | grep -cE '^[^[:space:]]' 2>/dev/null || echo 0)"
 # Expect: 1 heading line + 1 content line = 2 lines with non-whitespace starting chars
 if [[ "$content_lines" -le 3 ]]; then
   PASS=$((PASS + 1))

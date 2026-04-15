@@ -55,8 +55,16 @@ assert_not_contains() {
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
-  if echo "$haystack" | grep -qP "$pattern"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if grep $flags "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -138,7 +146,7 @@ assert_matches "v0.1.0 version heading exists" '## \[0\.1\.0\]' "$changelog_cont
 
 echo ""
 echo "Test 6: v0.1.0 entry has a date"
-assert_matches "v0.1.0 entry includes date" '\[0\.1\.0\].*\d{4}-\d{2}-\d{2}' "$changelog_content"
+assert_matches "v0.1.0 entry includes date" '\[0\.1\.0\].*[0-9]{4}-[0-9]{2}-[0-9]{2}' "$changelog_content"
 
 echo ""
 echo "Test 7: CHANGELOG has ### Added section"
@@ -186,7 +194,7 @@ assert_contains "documents opensource mode" "opensource" "$changelog_content"
 echo ""
 echo "Test 16: CHANGELOG documents content mode"
 TOTAL=$((TOTAL + 1))
-if echo "$changelog_content" | grep -qP '\bcontent\b'; then
+if grep -qw 'content' <<< "$changelog_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: documents content mode"
 else
@@ -212,7 +220,7 @@ echo ""
 
 echo "Test 19: CHANGELOG documents lens domain taxonomy"
 TOTAL=$((TOTAL + 1))
-if echo "$changelog_content" | grep -qP '(192.*code|18.*tool gate|14.*discovery|26.*deploy|13.*open.source|17.*content)'; then
+if grep -qE '(192.*code|18.*tool gate|14.*discovery|26.*deploy|13.*open.source|17.*content)' <<< "$changelog_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: documents lens counts / domain taxonomy"
 else
@@ -223,7 +231,7 @@ fi
 echo ""
 echo "Test 20: CHANGELOG documents DONE×3 streak protocol"
 TOTAL=$((TOTAL + 1))
-if echo "$changelog_content" | grep -qiP 'DONE.*[x×].*3|DONE.*streak'; then
+if grep -qiE 'DONE.*[x×].*3|DONE.*streak' <<< "$changelog_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: documents DONE×3 streak protocol"
 else
@@ -238,7 +246,7 @@ assert_contains "documents parallel execution" "arallel" "$changelog_content"
 echo ""
 echo "Test 22: CHANGELOG documents --agent flag"
 TOTAL=$((TOTAL + 1))
-if echo "$changelog_content" | grep -qiP '(agent.agnostic|--agent|supports.*claude.*codex)'; then
+if grep -qiE '(agent.agnostic|--agent|supports.*claude.*codex)' <<< "$changelog_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: documents --agent flag / agent-agnostic design"
 else
@@ -249,7 +257,7 @@ fi
 echo ""
 echo "Test 23: CHANGELOG documents resume support"
 TOTAL=$((TOTAL + 1))
-if echo "$changelog_content" | grep -qiP '(resume|--resume)'; then
+if grep -qiE '(resume|--resume)' <<< "$changelog_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: documents resume support"
 else
@@ -260,7 +268,7 @@ fi
 echo ""
 echo "Test 24: CHANGELOG documents --hosted DAST scanning"
 TOTAL=$((TOTAL + 1))
-if echo "$changelog_content" | grep -qiP '(--hosted|hosted.*DAST|DAST.*scan|Docker Compose.*scan)'; then
+if grep -qiE '(--hosted|hosted.*DAST|DAST.*scan|Docker Compose.*scan)' <<< "$changelog_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: documents --hosted DAST scanning"
 else
@@ -278,7 +286,7 @@ echo ""
 
 echo "Test 25: CHANGELOG notes first public release"
 TOTAL=$((TOTAL + 1))
-if echo "$changelog_content" | grep -qiP '(first.*public.*release|initial.*public.*release|first.*release|public.*release|previously.*private|private.*development)'; then
+if grep -qiE '(first.*public.*release|initial.*public.*release|first.*release|public.*release|previously.*private|private.*development)' <<< "$changelog_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: notes first public release"
 else
@@ -296,7 +304,7 @@ echo ""
 
 echo "Test 26: README contains a link to CHANGELOG.md"
 TOTAL=$((TOTAL + 1))
-if echo "$readme_content" | grep -qP 'CHANGELOG'; then
+if grep -qE 'CHANGELOG' <<< "$readme_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: README references CHANGELOG"
 else
@@ -307,7 +315,7 @@ fi
 echo ""
 echo "Test 27: README contains a Markdown link to CHANGELOG.md"
 TOTAL=$((TOTAL + 1))
-if echo "$readme_content" | grep -qP '\]\(CHANGELOG\.md\)'; then
+if grep -qE '\]\(CHANGELOG\.md\)' <<< "$readme_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: README has Markdown link to CHANGELOG.md"
 else
@@ -351,7 +359,7 @@ TOTAL=$((TOTAL + 1))
 cli_modes="audit feature bugfix discover deploy custom opensource content"
 missing_modes=""
 for mode in $cli_modes; do
-  if ! echo "$changelog_content" | grep -qP "\b${mode}\b"; then
+  if ! echo "$changelog_content" | grep -qw "${mode}"; then
     missing_modes="$missing_modes $mode"
   fi
 done
@@ -395,8 +403,8 @@ echo ""
 echo "Test 36: Mode listing count word matches actual mode count"
 TOTAL=$((TOTAL + 1))
 mode_line=$(echo "$changelog_content" | grep -i 'operational modes')
-if echo "$mode_line" | grep -qiP '\beight\b'; then
-  mode_count=$(echo "$mode_line" | grep -oP '\b(audit|feature|bugfix|discover|deploy|custom|opensource|content)\b' | wc -l)
+if grep -qiw 'eight' <<< "$mode_line"; then
+  mode_count=$(echo "$mode_line" | grep -owE 'audit|feature|bugfix|discover|deploy|custom|opensource|content' | wc -l)
   if [[ "$mode_count" -eq 8 ]]; then
     PASS=$((PASS + 1))
     echo "  PASS: mode count word 'Eight' matches 8 modes found on the line"

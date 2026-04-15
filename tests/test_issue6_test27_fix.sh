@@ -195,7 +195,7 @@ echo "Test 11: test_discover_mode.sh test 27 passes"
 test_output="$(bash "$TEST_FILE" 2>&1 || true)"
 test27_result="$(echo "$test_output" | grep -A2 'Test 27:' | head -3)"
 TOTAL=$((TOTAL + 1))
-if echo "$test27_result" | grep -q 'PASS'; then
+if grep -q 'PASS' <<< "$test27_result"; then
   PASS=$((PASS + 1))
   echo "  PASS: test 27 passes in test_discover_mode.sh"
 else
@@ -208,7 +208,7 @@ echo ""
 echo "Test 12: test_discover_mode.sh suite passes entirely (0 failures)"
 suite_result="$(echo "$test_output" | grep 'Results:' | tail -1)"
 TOTAL=$((TOTAL + 1))
-if echo "$suite_result" | grep -q '0 failed'; then
+if grep -q '0 failed' <<< "$suite_result"; then
   PASS=$((PASS + 1))
   echo "  PASS: full test_discover_mode.sh suite passes"
 else
@@ -289,7 +289,7 @@ TOTAL=$((TOTAL + 1))
 if [[ -f "$SCRIPT_DIR/Makefile" ]]; then
   make_output="$(cd "$SCRIPT_DIR" && make check 2>&1 || true)"
   # The make check should have some kind of aggregate summary
-  if echo "$make_output" | grep -qiE '(passed|failed|total|suites|results)'; then
+  if grep -qiE '(passed|failed|total|suites|results)' <<< "$make_output"; then
     PASS=$((PASS + 1))
     echo "  PASS: make check reports aggregate results"
   else
@@ -349,7 +349,7 @@ FAILEOF
   chmod +x "$_fail_script"
   _make_out="$(cd "$SCRIPT_DIR" && REPOLENS_MAKE_CHECK=1 make check 2>&1 || true)"
   rm -f "$_fail_script"
-  if echo "$_make_out" | grep -q 'FAILED: tests/test_zzz_tempfail.sh'; then
+  if grep -q 'FAILED: tests/test_zzz_tempfail.sh' <<< "$_make_out"; then
     PASS=$((PASS + 1))
     echo "  PASS: make check output shows FAILED for failing suite"
   else
@@ -378,7 +378,7 @@ FAILEOF
   rm -f "$_fail_script"
   # Find the aggregate results line (not make's own error message)
   _agg_line="$(echo "$_make_out" | grep -E '^Results:.*suites' | tail -1)"
-  if echo "$_agg_line" | grep -qE 'Results: [0-9]+ suites run, [1-9]'; then
+  if grep -qE 'Results: [0-9]+ suites run, [1-9]' <<< "$_agg_line"; then
     PASS=$((PASS + 1))
     echo "  PASS: aggregate reports non-zero failed count"
   else
@@ -405,7 +405,7 @@ if [[ -f "$SCRIPT_DIR/Makefile" ]] && command -v make >/dev/null 2>&1; then
   _make_out="$(cd "$SCRIPT_DIR" && REPOLENS_MAKE_CHECK=1 make check 2>&1 || true)"
   # This test file (test_issue6_test27_fix.sh) contains '&& make check',
   # so the recursion guard should skip it when REPOLENS_MAKE_CHECK=1 is set.
-  if echo "$_make_out" | grep -qE '(PASSED|FAILED): tests/test_issue6_test27_fix.sh'; then
+  if grep -qE '(PASSED|FAILED): tests/test_issue6_test27_fix.sh' <<< "$_make_out"; then
     FAIL=$((FAIL + 1))
     echo "  FAIL: recursion guard should skip this meta-test when REPOLENS_MAKE_CHECK=1"
   else
@@ -453,7 +453,7 @@ TOTAL=$((TOTAL + 1))
 if [[ -f "$SCRIPT_DIR/Makefile" ]] && command -v make >/dev/null 2>&1; then
   _make_out="$(cd "$SCRIPT_DIR" && REPOLENS_MAKE_CHECK=1 make check 2>&1 || true)"
   _agg_line="$(echo "$_make_out" | grep -E '^Results:.*suites' | tail -1)"
-  if echo "$_agg_line" | grep -qE '^Results: [0-9]+ suites run, [0-9]+ failed$'; then
+  if grep -qE '^Results: [0-9]+ suites run, [0-9]+ failed$' <<< "$_agg_line"; then
     PASS=$((PASS + 1))
     echo "  PASS: aggregate line matches expected format"
   else

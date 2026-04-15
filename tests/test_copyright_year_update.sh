@@ -58,8 +58,16 @@ assert_not_contains() {
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
-  if echo "$haystack" | grep -qP "$pattern"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if grep $flags "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -201,7 +209,7 @@ echo "Test 6: All .sh file copyright lines match NOTICE copyright line"
 TOTAL=$((TOTAL + 1))
 notice_copyright=""
 if [[ -f "$SCRIPT_DIR/NOTICE" ]]; then
-  notice_copyright="$(grep -oP 'Copyright \S+ .+' "$SCRIPT_DIR/NOTICE" | head -1)"
+  notice_copyright="$(grep -oE 'Copyright [^[:space:]]+ .+' "$SCRIPT_DIR/NOTICE" | head -1)"
 fi
 if [[ -z "$notice_copyright" ]]; then
   FAIL=$((FAIL + 1))
@@ -209,7 +217,7 @@ if [[ -z "$notice_copyright" ]]; then
 else
   mismatch=()
   for f in "${sh_files[@]}"; do
-    header_copyright="$(head -5 "$f" | grep -oP 'Copyright \S+ .+' | head -1)"
+    header_copyright="$(head -5 "$f" | grep -oE 'Copyright [^[:space:]]+ .+' | head -1)"
     if [[ "$header_copyright" != "$notice_copyright" ]]; then
       mismatch+=("$(basename "$f")")
     fi
@@ -373,7 +381,7 @@ echo ""
 echo "Test 14: NOTICE uses dash separator in year range (not comma, slash, etc.)"
 TOTAL=$((TOTAL + 1))
 if [[ -f "$SCRIPT_DIR/NOTICE" ]]; then
-  if grep -qP "Copyright 2025-2026" "$SCRIPT_DIR/NOTICE"; then
+  if grep -qE "Copyright 2025-2026" "$SCRIPT_DIR/NOTICE"; then
     PASS=$((PASS + 1))
     echo "  PASS: NOTICE uses dash-separated year range"
   else
@@ -401,7 +409,7 @@ if [[ -f "$tlf" ]]; then
   else
     FAIL=$((FAIL + 1))
     echo "  FAIL: test_license_files.sh fails (exit code $tlf_rc)"
-    echo "$tlf_output" | grep -E '^\s*FAIL:' | head -5 | sed 's/^/    /'
+    grep -E '^[[:space:]]*FAIL:' <<< "$tlf_output" | head -5 | sed 's/^/    /'
   fi
 else
   FAIL=$((FAIL + 1))
@@ -420,7 +428,7 @@ if [[ -f "$tlh" ]]; then
   else
     FAIL=$((FAIL + 1))
     echo "  FAIL: test_license_headers.sh fails (exit code $tlh_rc)"
-    echo "$tlh_output" | grep -E '^\s*FAIL:' | head -5 | sed 's/^/    /'
+    grep -E '^[[:space:]]*FAIL:' <<< "$tlh_output" | head -5 | sed 's/^/    /'
   fi
 else
   FAIL=$((FAIL + 1))

@@ -52,8 +52,16 @@ assert_not_contains() {
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
-  if echo "$haystack" | grep -qP "$pattern"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if grep $flags "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -261,10 +269,10 @@ if [[ -f "$README" ]]; then
   readme_content="$(cat "$README")"
   # The badge links to LICENSE — verify the file it points to exists
   TOTAL=$((TOTAL + 1))
-  if grep -qP '\]\(LICENSE\)' <<< "$readme_content" && [[ -f "$SCRIPT_DIR/LICENSE" ]]; then
+  if grep -qE '\]\(LICENSE\)' <<< "$readme_content" && [[ -f "$SCRIPT_DIR/LICENSE" ]]; then
     PASS=$((PASS + 1))
     echo "  PASS: README links to LICENSE and file exists"
-  elif ! grep -qP '\]\(LICENSE\)' <<< "$readme_content"; then
+  elif ! grep -qE '\]\(LICENSE\)' <<< "$readme_content"; then
     FAIL=$((FAIL + 1))
     echo "  FAIL: README does not contain link to LICENSE"
   else
@@ -297,7 +305,7 @@ echo "Test 26: LICENSE is plain text, not HTML or binary"
 if [[ -f "$SCRIPT_DIR/LICENSE" ]]; then
   TOTAL=$((TOTAL + 1))
   # Portable plaintext check: no NUL bytes and no HTML tags
-  if ! grep -qP '\x00' "$SCRIPT_DIR/LICENSE" 2>/dev/null && ! grep -qi '<html\|<head\|<body' "$SCRIPT_DIR/LICENSE"; then
+  if ! file --mime-encoding "$SCRIPT_DIR/LICENSE" 2>/dev/null | grep -q binary && ! grep -qi '<html\|<head\|<body' "$SCRIPT_DIR/LICENSE"; then
     PASS=$((PASS + 1))
     echo "  PASS: LICENSE is a text file"
   else
@@ -389,7 +397,7 @@ echo ""
 echo "Test 35: NOTICE is plain text, not HTML or binary"
 if [[ -f "$SCRIPT_DIR/NOTICE" ]]; then
   TOTAL=$((TOTAL + 1))
-  if ! grep -qP '\x00' "$SCRIPT_DIR/NOTICE" 2>/dev/null && ! grep -qi '<html\|<head\|<body' "$SCRIPT_DIR/NOTICE"; then
+  if ! file --mime-encoding "$SCRIPT_DIR/NOTICE" 2>/dev/null | grep -q binary && ! grep -qi '<html\|<head\|<body' "$SCRIPT_DIR/NOTICE"; then
     PASS=$((PASS + 1))
     echo "  PASS: NOTICE is a text file"
   else
@@ -424,7 +432,7 @@ echo "Test 38: README links to NOTICE file"
 if [[ -f "$README" ]]; then
   readme_content="$(cat "$README")"
   TOTAL=$((TOTAL + 1))
-  if echo "$readme_content" | grep -qP '\]\(NOTICE\)'; then
+  if grep -qE '\]\(NOTICE\)' <<< "$readme_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: README contains link to NOTICE"
   else
@@ -442,10 +450,10 @@ echo "Test 39: README NOTICE link resolves to existing file"
 if [[ -f "$README" ]]; then
   readme_content="$(cat "$README")"
   TOTAL=$((TOTAL + 1))
-  if echo "$readme_content" | grep -qP '\]\(NOTICE\)' && [[ -f "$SCRIPT_DIR/NOTICE" ]]; then
+  if grep -qE '\]\(NOTICE\)' <<< "$readme_content" && [[ -f "$SCRIPT_DIR/NOTICE" ]]; then
     PASS=$((PASS + 1))
     echo "  PASS: README links to NOTICE and file exists"
-  elif ! echo "$readme_content" | grep -qP '\]\(NOTICE\)'; then
+  elif ! echo "$readme_content" | grep -qE '\]\(NOTICE\)'; then
     FAIL=$((FAIL + 1))
     echo "  FAIL: README does not contain NOTICE link"
   else

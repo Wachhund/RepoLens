@@ -142,7 +142,7 @@ echo ""
 echo "Test 3: FUNDING.yml is valid YAML (simple key: value format)"
 TOTAL=$((TOTAL + 1))
 if [[ -f "$FUNDING_FILE" ]]; then
-  INVALID_LINES="$(grep -cvE '^\s*$|^\s*#|^[a-zA-Z_][a-zA-Z0-9_-]*:\s+\S' "$FUNDING_FILE" 2>/dev/null || true)"
+  INVALID_LINES="$(grep -cvE '^[[:space:]]*$|^[[:space:]]*#|^[a-zA-Z_][a-zA-Z0-9_-]*:[[:space:]]+[^[:space:]]' "$FUNDING_FILE" 2>/dev/null || true)"
   if [[ "$INVALID_LINES" == "0" ]]; then
     PASS=$((PASS + 1))
     echo "  PASS: FUNDING.yml is valid YAML"
@@ -286,7 +286,7 @@ echo ""
 echo "Test 10: FUNDING.yml has no trailing whitespace"
 TOTAL=$((TOTAL + 1))
 if [[ -f "$FUNDING_FILE" ]]; then
-  if grep -qP '\s+$' "$FUNDING_FILE"; then
+  if grep -qE '[[:space:]]+$' "$FUNDING_FILE"; then
     FAIL=$((FAIL + 1))
     echo "  FAIL: FUNDING.yml has trailing whitespace"
   else
@@ -327,7 +327,7 @@ echo ""
 echo "Test 12: FUNDING.yml has no comment lines"
 TOTAL=$((TOTAL + 1))
 if [[ -f "$FUNDING_FILE" ]]; then
-  if grep -qE '^\s*#' "$FUNDING_FILE"; then
+  if grep -qE '^[[:space:]]*#' "$FUNDING_FILE"; then
     FAIL=$((FAIL + 1))
     echo "  FAIL: FUNDING.yml contains comment lines"
   else
@@ -347,7 +347,7 @@ echo ""
 echo "Test 13: FUNDING.yml has exactly 2 non-empty lines"
 TOTAL=$((TOTAL + 1))
 if [[ -f "$FUNDING_FILE" ]]; then
-  LINE_COUNT="$(grep -cve '^\s*$' "$FUNDING_FILE")"
+  LINE_COUNT="$(grep -cve '^[[:space:]]*$' "$FUNDING_FILE")"
   if [[ "$LINE_COUNT" == "2" ]]; then
     PASS=$((PASS + 1))
     echo "  PASS: exactly 2 non-empty lines"

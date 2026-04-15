@@ -97,7 +97,7 @@ test4_area="$(sed -n '/Test 4:/,/Test 5:/p' "$TEST_FILE")"
 has_dynamic_expected=false
 # Check for jq computing an expected count — the pattern is some variable derived from jq
 # used as the expected value in assert_eq
-if echo "$test4_area" | grep -qE 'jq.*domains.*select.*lenses.*add|expected.*jq'; then
+if grep -qE 'jq.*domains.*select.*lenses.*add|expected.*jq' <<< "$test4_area"; then
   has_dynamic_expected=true
 fi
 TOTAL=$((TOTAL + 1))
@@ -173,7 +173,7 @@ echo "Test 11: test_discover_mode.sh test 4 must pass"
 test_output="$(bash "$TEST_FILE" 2>&1 || true)"
 test4_result="$(echo "$test_output" | grep -A2 'Test 4:' | head -3)"
 TOTAL=$((TOTAL + 1))
-if echo "$test4_result" | grep -q 'PASS'; then
+if grep -q 'PASS' <<< "$test4_result"; then
   PASS=$((PASS + 1))
   echo "  PASS: test 4 in test_discover_mode.sh passes"
 else
@@ -194,7 +194,7 @@ echo "Test 12: Audit jq query must not use single-mode exclusion pattern"
 audit_query_lines="$(grep -B1 -A1 'audit_lenses=' "$TEST_FILE" | head -5)"
 stale_pattern='select(.mode != "discover") end)'
 TOTAL=$((TOTAL + 1))
-if echo "$audit_query_lines" | grep -qF "$stale_pattern"; then
+if grep -qF "$stale_pattern" <<< "$audit_query_lines"; then
   FAIL=$((FAIL + 1))
   echo "  FAIL: audit jq query still uses stale single-mode exclusion"
   echo "    Found pattern: $stale_pattern"

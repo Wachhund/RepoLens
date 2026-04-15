@@ -56,8 +56,16 @@ assert_not_contains() {
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
-  if echo "$haystack" | grep -qP "$pattern"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if grep $flags "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -132,29 +140,29 @@ assert_matches "mission-aligned opening" "(?i)(audit|analysis|analyz|lens|code r
 
 echo ""
 echo "Test 5: Documents lens frontmatter 'id' field"
-assert_matches "frontmatter 'id' field documented" "(?m)^.*id:.*" "$contributing_content"
+assert_matches "frontmatter 'id' field documented" "^.*id:.*" "$contributing_content"
 
 echo ""
 echo "Test 6: Documents lens frontmatter 'domain' field"
-assert_matches "frontmatter 'domain' field documented" "(?m)^.*domain:.*" "$contributing_content"
+assert_matches "frontmatter 'domain' field documented" "^.*domain:.*" "$contributing_content"
 
 echo ""
 echo "Test 7: Documents lens frontmatter 'name' field"
-assert_matches "frontmatter 'name' field documented" "(?m)^.*name:.*" "$contributing_content"
+assert_matches "frontmatter 'name' field documented" "^.*name:.*" "$contributing_content"
 
 echo ""
 echo "Test 8: Documents lens frontmatter 'role' field"
-assert_matches "frontmatter 'role' field documented" "(?m)^.*role:.*" "$contributing_content"
+assert_matches "frontmatter 'role' field documented" "^.*role:.*" "$contributing_content"
 
 echo ""
 echo "Test 9: Shows YAML frontmatter delimiters (---)"
 # The frontmatter must be shown in a code block with --- delimiters
-assert_matches "shows YAML --- delimiters" "(?m)^---$" "$contributing_content"
+assert_matches "shows YAML --- delimiters" "^---$" "$contributing_content"
 
 echo ""
 echo "Test 10: Contains a concrete lens example (not just field names)"
 # A good example will have a concrete value for the id field (kebab-case)
-assert_matches "concrete lens example with kebab-case id" "id:\s*[a-z]+-[a-z]" "$contributing_content"
+assert_matches "concrete lens example with kebab-case id" "id:[[:space:]]*[a-z]+-[a-z]" "$contributing_content"
 
 # =====================================================================
 # 4. Prompt body conventions — What You Hunt For, How You Investigate
@@ -195,7 +203,7 @@ assert_matches "explains adding lens to domain" '(?i)(add|append|insert|include)
 
 echo ""
 echo "Test 17: Contains a domain taxonomy section"
-assert_matches "has domain taxonomy section" "(?im)^#{1,3}\s+.*(domain|taxonomy)" "$contributing_content"
+assert_matches "has domain taxonomy section" "(?im)^#{1,3}[[:space:]]+.*(domain|taxonomy)" "$contributing_content"
 
 echo ""
 echo "Test 18: References actual domain count from domains.json"
@@ -204,15 +212,15 @@ assert_contains "contains actual domain count ($actual_domains)" "$actual_domain
 
 echo ""
 echo "Test 19: Lists security domain"
-assert_matches "lists security domain" "(?i)\bsecurity\b" "$contributing_content"
+assert_matches "lists security domain" "(?i)security" "$contributing_content"
 
 echo ""
 echo "Test 20: Lists architecture domain"
-assert_matches "lists architecture domain" "(?i)\barchitecture\b" "$contributing_content"
+assert_matches "lists architecture domain" "(?i)architecture" "$contributing_content"
 
 echo ""
 echo "Test 21: Lists performance domain"
-assert_matches "lists performance domain" "(?i)\bperformance\b" "$contributing_content"
+assert_matches "lists performance domain" "(?i)performance" "$contributing_content"
 
 echo ""
 echo "Test 22: Lists mode-specific domains"
@@ -231,15 +239,15 @@ assert_matches "domains.json as source of truth" "(?i)(source of truth|authorita
 
 echo ""
 echo "Test 24: PR workflow section exists"
-assert_matches "has PR workflow section" "(?im)^#{1,3}\s+.*(pull request|PR|workflow|contribut)" "$contributing_content"
+assert_matches "has PR workflow section" "(?im)^#{1,3}[[:space:]]+.*(pull request|PR|workflow|contribut)" "$contributing_content"
 
 echo ""
 echo "Test 25: PR workflow mentions fork"
-assert_matches "workflow mentions fork" "(?i)\bfork\b" "$contributing_content"
+assert_matches "workflow mentions fork" "(?i)fork" "$contributing_content"
 
 echo ""
 echo "Test 26: PR workflow mentions branch"
-assert_matches "workflow mentions branch" "(?i)\bbranch\b" "$contributing_content"
+assert_matches "workflow mentions branch" "(?i)branch" "$contributing_content"
 
 echo ""
 echo "Test 27: PR workflow mentions pull request"
@@ -247,15 +255,15 @@ assert_matches "workflow mentions pull request" "(?i)pull request|PR" "$contribu
 
 echo ""
 echo "Test 28: PR workflow mentions review"
-assert_matches "workflow mentions review" "(?i)\breview\b" "$contributing_content"
+assert_matches "workflow mentions review" "(?i)review" "$contributing_content"
 
 echo ""
 echo "Test 29: PR workflow mentions merge"
-assert_matches "workflow mentions merge" "(?i)\bmerge\b" "$contributing_content"
+assert_matches "workflow mentions merge" "(?i)merge" "$contributing_content"
 
 echo ""
 echo "Test 30: PR workflow mentions master branch"
-assert_matches "workflow references master" "(?i)\bmaster\b" "$contributing_content"
+assert_matches "workflow references master" "(?i)master" "$contributing_content"
 
 # =====================================================================
 # 8. Commit message convention — Conventional Commits
@@ -389,7 +397,7 @@ echo ""
 echo "Test 53: CONTRIBUTING.md is plain text, not HTML or binary"
 if [[ -f "$CONTRIBUTING" ]]; then
   TOTAL=$((TOTAL + 1))
-  if ! grep -qP '\x00' "$CONTRIBUTING" 2>/dev/null && ! grep -qi '<html\|<head\|<body' "$CONTRIBUTING"; then
+  if ! file --mime-encoding "$CONTRIBUTING" 2>/dev/null | grep -q binary && ! grep -qi '<html\|<head\|<body' "$CONTRIBUTING"; then
     PASS=$((PASS + 1))
     echo "  PASS: CONTRIBUTING.md is a text file"
   else
@@ -404,7 +412,7 @@ fi
 
 echo ""
 echo "Test 54: CONTRIBUTING.md has a top-level heading"
-assert_matches "has H1 heading" "(?m)^#\s+" "$contributing_content"
+assert_matches "has H1 heading" "^#[[:space:]]+" "$contributing_content"
 
 echo ""
 echo "Test 55: No conflicting contributing files"
@@ -448,7 +456,7 @@ fi
 echo ""
 echo "Test 57: CONTRIBUTING.md has at least 8 headings"
 if [[ -f "$CONTRIBUTING" ]]; then
-  heading_count="$(grep -cP '^#{1,3}\s+' "$CONTRIBUTING")"
+  heading_count="$(grep -cE '^#{1,3}[[:space:]]+' "$CONTRIBUTING")"
   TOTAL=$((TOTAL + 1))
   if [[ "$heading_count" -ge 8 ]]; then
     PASS=$((PASS + 1))
@@ -490,7 +498,7 @@ assert_matches "states fields are required" "(?i)(required|must|mandatory|necess
 echo ""
 echo "Test 61: Documents step-by-step lens creation process"
 # Must have numbered steps or a clear sequence for adding a lens
-assert_matches "has numbered steps for lens creation" "(?m)^[0-9]+\.\s+" "$contributing_content"
+assert_matches "has numbered steps for lens creation" "^[0-9]+\.[[:space:]]+" "$contributing_content"
 
 echo ""
 echo "Test 62: Mentions running make check before submitting"
@@ -526,7 +534,7 @@ echo "Test 66: Frontmatter example goes beyond just naming the 4 fields"
 # The old version just said "id, domain, name, role" in passing — the new one needs an annotated example
 # Check that there's a code block containing frontmatter (both ``` and --- and id: must appear)
 TOTAL=$((TOTAL + 1))
-if echo "$contributing_content" | grep -qP '```' && echo "$contributing_content" | grep -qP '^id:\s+\S' && echo "$contributing_content" | grep -qP '^---$'; then
+if grep -qE '```' <<< "$contributing_content" && grep -qE '^id:[[:space:]]+[^[:space:]]' <<< "$contributing_content" && grep -qE '^---$' <<< "$contributing_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: has code block with frontmatter example"
 else
@@ -545,11 +553,11 @@ assert_matches "documents Bash requirement" "(?i)bash.*4|bash 4" "$contributing_
 
 echo ""
 echo "Test 68: Documents jq prerequisite"
-assert_matches "documents jq prerequisite" "(?i)\bjq\b" "$contributing_content"
+assert_matches "documents jq prerequisite" "(?i)jq" "$contributing_content"
 
 echo ""
 echo "Test 69: Documents git prerequisite"
-assert_matches "documents git prerequisite" "(?i)\bgit\b" "$contributing_content"
+assert_matches "documents git prerequisite" "(?i)git" "$contributing_content"
 
 echo ""
 echo "Test 70: Documents agent CLI prerequisite"
@@ -577,7 +585,7 @@ assert_contains "documents chore: prefix" "chore:" "$contributing_content"
 
 echo ""
 echo "Test 74: Has a Table of Contents section"
-assert_matches "has table of contents" "(?im)^#{1,3}\s+table of contents" "$contributing_content"
+assert_matches "has table of contents" "(?im)^#{1,3}[[:space:]]+table of contents" "$contributing_content"
 
 echo ""
 echo "Test 75: Table of Contents links to key sections"
@@ -595,7 +603,7 @@ assert_matches "documents variable quoting" '(?i)quote.*variable|\$var|"\$' "$co
 
 echo ""
 echo "Test 77: Code style documents 'local' for function variables"
-assert_matches "documents local keyword" "(?i)\blocal\b.*variable|variable.*\blocal\b|\blocal\b.*function" "$contributing_content"
+assert_matches "documents local keyword" "(?i)local.*variable|variable.*local|local.*function" "$contributing_content"
 
 # =====================================================================
 # 27. Domain taxonomy cross-validation against domains.json
@@ -607,7 +615,7 @@ if [[ -f "$DOMAINS_FILE" ]]; then
   default_domains_in_json="$(jq -r '.domains[] | select(.mode == null or .mode == "") | .id' "$DOMAINS_FILE" | sort)"
   all_pass=true
   while IFS= read -r domain_id; do
-    if ! echo "$contributing_content" | grep -qP "(?m)^\|?\s*${domain_id}\s*\|"; then
+    if ! echo "$contributing_content" | grep -qE "^\|?[[:space:]]*${domain_id}[[:space:]]*\|"; then
       echo "  MISSING in CONTRIBUTING.md: $domain_id"
       all_pass=false
     fi
@@ -631,8 +639,8 @@ echo "Test 79: Lens counts in CONTRIBUTING.md match domains.json"
 if [[ -f "$DOMAINS_FILE" ]]; then
   mismatch_count=0
   while IFS=: read -r domain_id expected_count _mode; do
-    if echo "$contributing_content" | grep -qP "(?m)^\|?\s*${domain_id}\s*\|"; then
-      doc_count="$(echo "$contributing_content" | grep -P "^\|?\s*${domain_id}\s*\|" | grep -oP '\|\s*(\d+)\s*\|?\s*$' | grep -oP '\d+')"
+    if grep -qE "^\|?[[:space:]]*${domain_id}[[:space:]]*\|" <<< "$contributing_content"; then
+      doc_count="$(echo "$contributing_content" | grep -E "^\|?[[:space:]]*${domain_id}[[:space:]]*\|" | grep -oE '\|[[:space:]]*([0-9]+)[[:space:]]*\|?[[:space:]]*$' | grep -oE '[0-9]+')"
       if [[ -n "$doc_count" && "$doc_count" != "$expected_count" ]]; then
         echo "  MISMATCH: $domain_id — doc says $doc_count, domains.json has $expected_count"
         mismatch_count=$((mismatch_count + 1))
@@ -663,7 +671,7 @@ if [[ -f "$DOMAINS_FILE" ]]; then
   mode_ok=true
   while IFS=: read -r domain_id _count mode; do
     if [[ "$mode" != "default" ]]; then
-      if ! echo "$contributing_content" | grep -qP "(?m)^\|?\s*${domain_id}\s*\|.*\`${mode}\`"; then
+      if ! echo "$contributing_content" | grep -qE "^\|?[[:space:]]*${domain_id}[[:space:]]*\|.*\`${mode}\`"; then
         echo "  MISSING mode value: $domain_id should show mode=$mode"
         mode_ok=false
       fi
@@ -694,21 +702,21 @@ if [[ -f "$DOMAINS_FILE" ]]; then
   mode_specific_section="$(echo "$contributing_content" | sed -n '/### Mode-Specific Domains/,/^## /p')"
   placement_ok=true
   while IFS= read -r domain_id; do
-    if echo "$mode_specific_section" | grep -qP "^\|?\s*${domain_id}\s*\|"; then
+    if grep -qE "^\|?[[:space:]]*${domain_id}[[:space:]]*\|" <<< "$mode_specific_section"; then
       echo "  WRONG TABLE: $domain_id has no mode field but appears in Mode-Specific section"
       placement_ok=false
     fi
-    if ! echo "$default_section" | grep -qP "^\|?\s*${domain_id}\s*\|"; then
+    if ! echo "$default_section" | grep -qE "^\|?[[:space:]]*${domain_id}[[:space:]]*\|"; then
       echo "  MISSING: $domain_id has no mode field but is missing from Default-Mode section"
       placement_ok=false
     fi
   done < <(jq -r '.domains[] | select(.mode == null or .mode == "") | .id' "$DOMAINS_FILE")
   while IFS= read -r domain_id; do
-    if echo "$default_section" | grep -qP "^\|?\s*${domain_id}\s*\|"; then
+    if grep -qE "^\|?[[:space:]]*${domain_id}[[:space:]]*\|" <<< "$default_section"; then
       echo "  WRONG TABLE: $domain_id has mode field but appears in Default-Mode section"
       placement_ok=false
     fi
-    if ! echo "$mode_specific_section" | grep -qP "^\|?\s*${domain_id}\s*\|"; then
+    if ! echo "$mode_specific_section" | grep -qE "^\|?[[:space:]]*${domain_id}[[:space:]]*\|"; then
       echo "  MISSING: $domain_id has mode field but is missing from Mode-Specific section"
       placement_ok=false
     fi
@@ -733,11 +741,11 @@ if [[ -f "$DOMAINS_FILE" ]]; then
   actual_default="$(jq '[.domains[] | select(.mode == null or .mode == "")] | length' "$DOMAINS_FILE")"
   actual_mode="$(jq '[.domains[] | select(.mode != null and .mode != "")] | length' "$DOMAINS_FILE")"
   heading_count_ok=true
-  if ! echo "$contributing_content" | grep -qP "### Default-Mode Domains \(${actual_default}\)"; then
+  if ! echo "$contributing_content" | grep -qE "### Default-Mode Domains \(${actual_default}\)"; then
     echo "  MISMATCH: Default-Mode heading count should be $actual_default"
     heading_count_ok=false
   fi
-  if ! echo "$contributing_content" | grep -qP "### Mode-Specific Domains \(${actual_mode}\)"; then
+  if ! echo "$contributing_content" | grep -qE "### Mode-Specific Domains \(${actual_mode}\)"; then
     echo "  MISMATCH: Mode-Specific heading count should be $actual_mode"
     heading_count_ok=false
   fi
@@ -761,8 +769,8 @@ fi
 
 echo ""
 echo "Test 83: Frontmatter example lens ID matches an actual lens file"
-example_id="$(echo "$contributing_content" | grep -P '^id:\s+' | head -1 | sed 's/^id:\s*//')"
-example_domain="$(echo "$contributing_content" | grep -P '^domain:\s+' | head -1 | sed 's/^domain:\s*//')"
+example_id="$(echo "$contributing_content" | grep -E '^id:[[:space:]]+' | head -1 | sed 's/^id:[[:space:]]*//')"
+example_domain="$(echo "$contributing_content" | grep -E '^domain:[[:space:]]+' | head -1 | sed 's/^domain:[[:space:]]*//')"
 TOTAL=$((TOTAL + 1))
 if [[ -n "$example_id" && -n "$example_domain" ]]; then
   expected_file="$SCRIPT_DIR/prompts/lenses/$example_domain/$example_id.md"
@@ -788,10 +796,10 @@ TOTAL=$((TOTAL + 1))
 if [[ -n "$example_id" && -n "$example_domain" ]]; then
   expected_file="$SCRIPT_DIR/prompts/lenses/$example_domain/$example_id.md"
   if [[ -f "$expected_file" ]]; then
-    example_name="$(echo "$contributing_content" | grep -P '^name:\s+' | head -1 | sed 's/^name:\s*//')"
-    example_role="$(echo "$contributing_content" | grep -P '^role:\s+' | head -1 | sed 's/^role:\s*//')"
-    actual_name="$(grep -P '^name:\s+' "$expected_file" | head -1 | sed 's/^name:\s*//')"
-    actual_role="$(grep -P '^role:\s+' "$expected_file" | head -1 | sed 's/^role:\s*//')"
+    example_name="$(echo "$contributing_content" | grep -E '^name:[[:space:]]+' | head -1 | sed 's/^name:[[:space:]]*//')"
+    example_role="$(echo "$contributing_content" | grep -E '^role:[[:space:]]+' | head -1 | sed 's/^role:[[:space:]]*//')"
+    actual_name="$(grep -E '^name:[[:space:]]+' "$expected_file" | head -1 | sed 's/^name:[[:space:]]*//')"
+    actual_role="$(grep -E '^role:[[:space:]]+' "$expected_file" | head -1 | sed 's/^role:[[:space:]]*//')"
     if [[ "$example_name" == "$actual_name" && "$example_role" == "$actual_role" ]]; then
       PASS=$((PASS + 1))
       echo "  PASS: name='$example_name' and role='$example_role' match actual lens file"
@@ -831,7 +839,7 @@ if [[ -f "$DOMAINS_FILE" ]]; then
       echo "  INVALID: JSON snippet lens '$lens_id' not found in domains.json"
       snippet_ok=false
     fi
-  done < <(echo "$json_block" | grep -oP '"([a-z]+-[a-z-]+)"' | tr -d '"')
+  done < <(echo "$json_block" | grep -oE '"([a-z]+-[a-z-]+)"' | tr -d '"')
   TOTAL=$((TOTAL + 1))
   if $snippet_ok; then
     PASS=$((PASS + 1))
@@ -852,7 +860,7 @@ fi
 
 echo ""
 echo "Test 85: Has Structure Breakdown table for lens sections"
-assert_matches "has Structure Breakdown section" "(?im)^#{1,4}\s+Structure Breakdown" "$contributing_content"
+assert_matches "has Structure Breakdown section" "(?im)^#{1,4}[[:space:]]+Structure Breakdown" "$contributing_content"
 
 # =====================================================================
 # 33. Table of Contents covers all major sections
@@ -922,10 +930,10 @@ fi
 echo ""
 echo "Test 92: JSON snippet domain id/name match domains.json"
 if [[ -f "$DOMAINS_FILE" ]]; then
-  snippet_domain_id="$(echo "$contributing_content" | sed -n '/```json/,/```/p' | grep -oP '"id":\s*"\K[^"]+')"
+  snippet_domain_id="$(echo "$contributing_content" | sed -n '/```json/,/```/p' | grep -oE '"id":[[:space:]]*"[^"]+' | sed 's/"id":[[:space:]]*"//')"
   if [[ -n "$snippet_domain_id" ]]; then
     actual_name="$(jq -r --arg id "$snippet_domain_id" '.domains[] | select(.id == $id) | .name' "$DOMAINS_FILE")"
-    snippet_name="$(echo "$contributing_content" | sed -n '/```json/,/```/p' | grep -oP '"name":\s*"\K[^"]+')"
+    snippet_name="$(echo "$contributing_content" | sed -n '/```json/,/```/p' | grep -oE '"name":[[:space:]]*"[^"]+' | sed 's/"name":[[:space:]]*"//')"
     TOTAL=$((TOTAL + 1))
     if [[ -n "$actual_name" && "$snippet_name" == "$actual_name" ]]; then
       PASS=$((PASS + 1))
@@ -948,7 +956,7 @@ fi
 echo ""
 echo "Test 93: JSON snippet domain order matches domains.json"
 if [[ -f "$DOMAINS_FILE" && -n "${snippet_domain_id:-}" ]]; then
-  snippet_order="$(echo "$contributing_content" | sed -n '/```json/,/```/p' | grep -oP '"order":\s*\K[0-9]+')"
+  snippet_order="$(echo "$contributing_content" | sed -n '/```json/,/```/p' | grep -oE '"order":[[:space:]]*[0-9]+' | sed 's/"order":[[:space:]]*//')"
   actual_order="$(jq -r --arg id "$snippet_domain_id" '.domains[] | select(.id == $id) | .order' "$DOMAINS_FILE")"
   TOTAL=$((TOTAL + 1))
   if [[ -n "$snippet_order" && "$snippet_order" == "$actual_order" ]]; then
@@ -997,7 +1005,7 @@ assert_matches "no code changes needed statement" "(?i)no code changes.*(needed|
 
 echo ""
 echo "Test 96: All Table of Contents anchors resolve to actual headings"
-heading_anchors="$(echo "$contributing_content" | grep -P '^#{1,4}\s+' | sed 's/^#\+ //' | \
+heading_anchors="$(echo "$contributing_content" | grep -E '^#{1,4}[[:space:]]+' | sed 's/^#\+ //' | \
   tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9 -]//g' | sed 's/  */ /g' | sed 's/ /-/g')"
 anchors_ok=true
 while IFS= read -r anchor; do
@@ -1005,7 +1013,7 @@ while IFS= read -r anchor; do
     echo "  BROKEN ANCHOR: #$anchor does not resolve to a heading"
     anchors_ok=false
   fi
-done < <(echo "$contributing_content" | sed -n '/## Table of Contents/,/^## [^T]/p' | grep -oP '\]\(#\K[^)]+')
+done < <(echo "$contributing_content" | sed -n '/## Table of Contents/,/^## [^T]/p' | grep -oE '\]\(#[^)]+' | sed 's/^](#//')
 TOTAL=$((TOTAL + 1))
 if $anchors_ok; then
   PASS=$((PASS + 1))
@@ -1031,7 +1039,7 @@ echo ""
 echo "Test 98: JSON snippet lenses array matches actual domain lenses from domains.json"
 if [[ -f "$DOMAINS_FILE" && -n "${snippet_domain_id:-}" ]]; then
   actual_lenses="$(jq -r --arg id "$snippet_domain_id" '.domains[] | select(.id == $id) | .lenses[]' "$DOMAINS_FILE")"
-  snippet_lenses="$(echo "$contributing_content" | sed -n '/```json/,/```/p' | grep -oP '"([a-z]+-[a-z-]+)"' | tr -d '"' | grep -v 'your-new-lens-id')"
+  snippet_lenses="$(echo "$contributing_content" | sed -n '/```json/,/```/p' | grep -oE '"([a-z]+-[a-z-]+)"' | tr -d '"' | grep -v 'your-new-lens-id')"
   all_present=true
   while IFS= read -r lens; do
     if ! echo "$actual_lenses" | grep -qxF "$lens"; then

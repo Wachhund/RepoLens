@@ -59,8 +59,16 @@ assert_not_contains() {
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
-  if echo "$haystack" | grep -qP "$pattern"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if grep $flags "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -206,10 +214,10 @@ for f in "${sh_files[@]}"; do
   header_area="$(head -20 "$f")"
   has_opening=false
   has_closing=false
-  if echo "$header_area" | grep -q 'Licensed under the Apache License, Version 2.0'; then
+  if grep -q 'Licensed under the Apache License, Version 2.0' <<< "$header_area"; then
     has_opening=true
   fi
-  if echo "$header_area" | grep -q 'limitations under the License'; then
+  if grep -q 'limitations under the License' <<< "$header_area"; then
     has_closing=true
   fi
   if [[ "$has_opening" != true || "$has_closing" != true ]]; then
@@ -425,7 +433,7 @@ echo "Test 14: Header copyright line matches NOTICE file content"
 TOTAL=$((TOTAL + 1))
 notice_copyright=""
 if [[ -f "$SCRIPT_DIR/NOTICE" ]]; then
-  notice_copyright="$(grep -oP 'Copyright [\d-]+ .+' "$SCRIPT_DIR/NOTICE" | head -1)"
+  notice_copyright="$(grep -oE 'Copyright [0-9-]+ .+' "$SCRIPT_DIR/NOTICE" | head -1)"
 fi
 if [[ -z "$notice_copyright" ]]; then
   FAIL=$((FAIL + 1))
@@ -433,7 +441,7 @@ if [[ -z "$notice_copyright" ]]; then
 else
   mismatch=()
   for f in "${sh_files[@]}"; do
-    header_copyright="$(head -5 "$f" | grep -oP 'Copyright [\d-]+ .+' | head -1)"
+    header_copyright="$(head -5 "$f" | grep -oE 'Copyright [0-9-]+ .+' | head -1)"
     if [[ "$header_copyright" != "$notice_copyright" ]]; then
       mismatch+=("$(basename "$f")")
     fi

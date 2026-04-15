@@ -63,8 +63,16 @@ assert_not_contains() {
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
-  if echo "$haystack" | grep -qP "$pattern"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if grep $flags "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -176,7 +184,7 @@ assert_contains "README contains project name" "RepoLens" "$readme_content"
 echo ""
 echo "Test 7: README contains quickstart or getting started section"
 TOTAL=$((TOTAL + 1))
-if echo "$readme_content" | grep -qiP '(quick\s*start|getting\s*started)'; then
+if grep -qiE '(quick[[:space:]]*start|getting[[:space:]]*started)' <<< "$readme_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: README has quickstart/getting-started section"
 else
@@ -187,7 +195,7 @@ fi
 echo ""
 echo "Test 8: README contains prerequisites section"
 TOTAL=$((TOTAL + 1))
-if echo "$readme_content" | grep -qiP 'prerequisites'; then
+if grep -qiE 'prerequisites' <<< "$readme_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: README has prerequisites section"
 else
@@ -198,7 +206,7 @@ fi
 echo ""
 echo "Test 9: README contains legal or license section"
 TOTAL=$((TOTAL + 1))
-if echo "$readme_content" | grep -qiP '(## .*legal|## .*license|## .*licensing)'; then
+if grep -qiE '(## .*legal|## .*license|## .*licensing)' <<< "$readme_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: README has legal/license section"
 else
@@ -213,7 +221,7 @@ assert_contains "README has correct clone URL" "TheMorpheus407/RepoLens" "$readm
 echo ""
 echo "Test 11: README contains usage examples or CLI reference"
 TOTAL=$((TOTAL + 1))
-if echo "$readme_content" | grep -qiP '(usage|cli.*reference|command.*reference)'; then
+if grep -qiE '(usage|cli.*reference|command.*reference)' <<< "$readme_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: README has usage/CLI reference section"
 else
@@ -267,7 +275,7 @@ fi
 echo ""
 echo "Test 15: No hardcoded password assignments in source files"
 TOTAL=$((TOTAL + 1))
-pwd_hits="$(git -C "$SCRIPT_DIR" grep -l 'password\s*=\s*["\x27][^"\x27]\+["\x27]' -- '*.sh' '*.json' ':!prompts/' ':!tests/' ':!logs/' 2>/dev/null | wc -l)"
+pwd_hits="$(git -C "$SCRIPT_DIR" grep -l 'password[[:space:]]*=[[:space:]]*["\x27][^"\x27]\+["\x27]' -- '*.sh' '*.json' ':!prompts/' ':!tests/' ':!logs/' 2>/dev/null | wc -l)"
 if [[ "$pwd_hits" -eq 0 ]]; then
   PASS=$((PASS + 1))
   echo "  PASS: no hardcoded password assignments found"
@@ -295,7 +303,7 @@ assert_file_not_empty ".gitignore is not empty" "$SCRIPT_DIR/.gitignore"
 echo ""
 echo "Test 17: .gitignore covers log files"
 TOTAL=$((TOTAL + 1))
-if echo "$gitignore_content" | grep -qP '(logs/|\*\.log)'; then
+if grep -qE '(logs/|\*\.log)' <<< "$gitignore_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: .gitignore covers log files"
 else
@@ -495,7 +503,7 @@ assert_not_contains "no [INSERT placeholder text" "[INSERT" "$readme_content"
 echo ""
 echo "Test 36: README does not contain 'coming soon' placeholder"
 TOTAL=$((TOTAL + 1))
-if echo "$readme_content" | grep -qiP 'coming soon'; then
+if grep -qiE 'coming soon' <<< "$readme_content"; then
   FAIL=$((FAIL + 1))
   echo "  FAIL: README contains 'coming soon' placeholder text"
 else
@@ -554,7 +562,7 @@ echo "Test 40: SECURITY.md contains vulnerability reporting instructions"
 if [[ -f "$SCRIPT_DIR/SECURITY.md" ]]; then
   security_content="$(cat "$SCRIPT_DIR/SECURITY.md")"
   TOTAL=$((TOTAL + 1))
-  if echo "$security_content" | grep -qiP '(report|disclos|vulnerabilit)'; then
+  if grep -qiE '(report|disclos|vulnerabilit)' <<< "$security_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: SECURITY.md contains vulnerability reporting guidance"
   else
@@ -579,7 +587,7 @@ echo "Test 41: CONTRIBUTING.md explains how to contribute"
 if [[ -f "$SCRIPT_DIR/CONTRIBUTING.md" ]]; then
   contributing_content="$(cat "$SCRIPT_DIR/CONTRIBUTING.md")"
   TOTAL=$((TOTAL + 1))
-  if echo "$contributing_content" | grep -qiP '(pull request|issue|contribut|fork)'; then
+  if grep -qiE '(pull request|issue|contribut|fork)' <<< "$contributing_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: CONTRIBUTING.md contains contribution guidance"
   else
@@ -606,7 +614,7 @@ assert_contains "README references Apache-2.0" "Apache-2.0" "$readme_content"
 echo ""
 echo "Test 43: README links to LICENSE file"
 TOTAL=$((TOTAL + 1))
-if echo "$readme_content" | grep -qP '\]\(LICENSE\)'; then
+if grep -qE '\]\(LICENSE\)' <<< "$readme_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: README contains link to LICENSE"
 else
@@ -626,7 +634,7 @@ echo "Test 44: CODE_OF_CONDUCT.md describes standards of conduct"
 if [[ -f "$SCRIPT_DIR/CODE_OF_CONDUCT.md" ]]; then
   coc_content="$(cat "$SCRIPT_DIR/CODE_OF_CONDUCT.md")"
   TOTAL=$((TOTAL + 1))
-  if echo "$coc_content" | grep -qiP '(harassment|respectful|unacceptable|enforcement)'; then
+  if grep -qiE '(harassment|respectful|unacceptable|enforcement)' <<< "$coc_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: CODE_OF_CONDUCT.md contains conduct standards"
   else
@@ -643,7 +651,7 @@ echo ""
 echo "Test 45: CODE_OF_CONDUCT.md has enforcement section"
 if [[ -f "$SCRIPT_DIR/CODE_OF_CONDUCT.md" ]]; then
   TOTAL=$((TOTAL + 1))
-  if echo "$coc_content" | grep -qiP '## .*enforcement'; then
+  if grep -qiE '## .*enforcement' <<< "$coc_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: CODE_OF_CONDUCT.md has enforcement section"
   else
@@ -719,7 +727,7 @@ echo "Test 48: SECURITY.md has responsible disclosure policy"
 if [[ -f "$SCRIPT_DIR/SECURITY.md" ]]; then
   security_content="${security_content:-$(cat "$SCRIPT_DIR/SECURITY.md")}"
   TOTAL=$((TOTAL + 1))
-  if echo "$security_content" | grep -qiP '(disclosure|coordinated)'; then
+  if grep -qiE '(disclosure|coordinated)' <<< "$security_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: SECURITY.md has disclosure policy"
   else
@@ -736,7 +744,7 @@ echo ""
 echo "Test 49: SECURITY.md defines scope"
 if [[ -f "$SCRIPT_DIR/SECURITY.md" ]]; then
   TOTAL=$((TOTAL + 1))
-  if echo "$security_content" | grep -qiP '## .*scope'; then
+  if grep -qiE '## .*scope' <<< "$security_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: SECURITY.md defines scope"
   else
@@ -753,7 +761,7 @@ echo ""
 echo "Test 50: SECURITY.md has response timeline"
 if [[ -f "$SCRIPT_DIR/SECURITY.md" ]]; then
   TOTAL=$((TOTAL + 1))
-  if echo "$security_content" | grep -qiP '(timeline|response time|within.*hours|within.*week)'; then
+  if grep -qiE '(timeline|response time|within.*hours|within.*week)' <<< "$security_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: SECURITY.md includes response timeline"
   else
@@ -778,7 +786,7 @@ echo "Test 51: CONTRIBUTING.md includes development setup"
 if [[ -f "$SCRIPT_DIR/CONTRIBUTING.md" ]]; then
   contributing_content="${contributing_content:-$(cat "$SCRIPT_DIR/CONTRIBUTING.md")}"
   TOTAL=$((TOTAL + 1))
-  if echo "$contributing_content" | grep -qiP '(development setup|prerequisites|getting started|dev setup)'; then
+  if grep -qiE '(development setup|prerequisites|getting started|dev setup)' <<< "$contributing_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: CONTRIBUTING.md includes development setup"
   else
@@ -795,7 +803,7 @@ echo ""
 echo "Test 52: CONTRIBUTING.md explains how to run tests"
 if [[ -f "$SCRIPT_DIR/CONTRIBUTING.md" ]]; then
   TOTAL=$((TOTAL + 1))
-  if echo "$contributing_content" | grep -qiP '(run.*test|test.*suite|make check)'; then
+  if grep -qiE '(run.*test|test.*suite|make check)' <<< "$contributing_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: CONTRIBUTING.md explains how to run tests"
   else
@@ -812,7 +820,7 @@ echo ""
 echo "Test 53: CONTRIBUTING.md describes code style conventions"
 if [[ -f "$SCRIPT_DIR/CONTRIBUTING.md" ]]; then
   TOTAL=$((TOTAL + 1))
-  if echo "$contributing_content" | grep -qiP '(code style|coding style|style guide|set -uo pipefail)'; then
+  if grep -qiE '(code style|coding style|style guide|set -uo pipefail)' <<< "$contributing_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: CONTRIBUTING.md describes code style"
   else
@@ -837,7 +845,7 @@ echo "Test 54: CHANGELOG has structured section headers"
 if [[ -f "$SCRIPT_DIR/CHANGELOG.md" ]]; then
   changelog_content="${changelog_content:-$(cat "$SCRIPT_DIR/CHANGELOG.md")}"
   TOTAL=$((TOTAL + 1))
-  if echo "$changelog_content" | grep -qiP '### (Added|Changed|Fixed|Removed|Deprecated|Security)'; then
+  if grep -qiE '### (Added|Changed|Fixed|Removed|Deprecated|Security)' <<< "$changelog_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: CHANGELOG has structured section headers"
   else
@@ -854,7 +862,7 @@ echo ""
 echo "Test 55: CHANGELOG v0.1.0 entry has a date"
 if [[ -f "$SCRIPT_DIR/CHANGELOG.md" ]]; then
   TOTAL=$((TOTAL + 1))
-  if echo "$changelog_content" | grep -qP '\[0\.1\.0\].*\d{4}-\d{2}-\d{2}'; then
+  if grep -qE '\[0\.1\.0\].*[0-9]{4}-[0-9]{2}-[0-9]{2}' <<< "$changelog_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: CHANGELOG v0.1.0 entry has a date"
   else

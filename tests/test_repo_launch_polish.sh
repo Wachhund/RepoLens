@@ -55,8 +55,16 @@ assert_not_contains() {
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
-  if echo "$haystack" | grep -qP "$pattern"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if grep $flags "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -259,10 +267,10 @@ assert_matches "license badge present" "\[!\[.*License.*Apache.*2\.0.*\]\(https:
 echo ""
 echo "Test 26: Version badge present"
 TOTAL=$((TOTAL + 1))
-if echo "$readme_content" | grep -qP '\[!\[.*(version|Version|v0\.1\.0|Release|release).*\]\(https://img\.shields\.io'; then
+if grep -qE '\[!\[.*(version|Version|v0\.1\.0|Release|release).*\]\(https://img\.shields\.io' <<< "$readme_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: version badge present (shields.io)"
-elif echo "$readme_content" | grep -qP '\[!\[.*GitHub Release.*\]\(https://img\.shields\.io/github/v/release'; then
+elif grep -qE '\[!\[.*GitHub Release.*\]\(https://img\.shields\.io/github/v/release' <<< "$readme_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: version badge present (GitHub release)"
 else
@@ -278,7 +286,7 @@ assert_matches "stars badge present" "\[!\[.*[Ss]tars.*\]\(https://img\.shields\
 echo ""
 echo "Test 28: Badge block has at least 3 badges (license + version + stars)"
 TOTAL=$((TOTAL + 1))
-badge_count="$(echo "$readme_content" | grep -cP '\[!\[.*\]\(https://img\.shields\.io')"
+badge_count="$(echo "$readme_content" | grep -cE '\[!\[.*\]\(https://img\.shields\.io')"
 if [[ "$badge_count" -ge 3 ]]; then
   PASS=$((PASS + 1))
   echo "  PASS: found $badge_count shield badges (>= 3)"
@@ -295,7 +303,7 @@ echo ""
 echo "Test 30: Version badge links to CHANGELOG or releases"
 TOTAL=$((TOTAL + 1))
 # The badge image line ([![...](shields-url)](link-target)) must link to CHANGELOG or releases
-if echo "$readme_content" | grep -P 'img\.shields\.io.*version|img\.shields\.io.*release|img\.shields\.io.*v0' | grep -qP '\]\(CHANGELOG\.md\)|\]\(.*releases\)'; then
+if grep -E 'img\.shields\.io.*version|img\.shields\.io.*release|img\.shields\.io.*v0' <<< "$readme_content" | grep -qE '\]\(CHANGELOG\.md\)|\]\(.*releases\)'; then
   PASS=$((PASS + 1))
   echo "  PASS: version badge links to CHANGELOG or releases"
 else
@@ -347,7 +355,7 @@ echo "Test 34: Lens request template 'about:' mentions lens"
 TOTAL=$((TOTAL + 1))
 if [[ -f "$LENS_TEMPLATE" ]]; then
   about_line="$(grep '^about:' "$LENS_TEMPLATE" | head -1)"
-  if echo "$about_line" | grep -qiP 'lens'; then
+  if grep -qiE 'lens' <<< "$about_line"; then
     PASS=$((PASS + 1))
     echo "  PASS: lens request about: mentions lens"
   else
@@ -388,7 +396,7 @@ echo ""
 echo "Test 36: PR template has at least 3 checkbox items"
 TOTAL=$((TOTAL + 1))
 if [[ -f "$PR_TEMPLATE" ]]; then
-  checkbox_count="$(grep -cP '^\s*-\s*\[[ ]\]' "$PR_TEMPLATE")"
+  checkbox_count="$(grep -cE '^[[:space:]]*-[[:space:]]*\[[ ]\]' "$PR_TEMPLATE")"
   if [[ "$checkbox_count" -ge 3 ]]; then
     PASS=$((PASS + 1))
     echo "  PASS: PR template has $checkbox_count checkboxes (>= 3)"
@@ -448,7 +456,7 @@ echo ""
 echo "Test 46: README badges appear in first 10 lines"
 TOTAL=$((TOTAL + 1))
 if [[ -f "$SCRIPT_DIR/README.md" ]]; then
-  badge_in_header="$(head -10 "$SCRIPT_DIR/README.md" | grep -cP '\[!\[.*\]\(https://img\.shields\.io')"
+  badge_in_header="$(head -10 "$SCRIPT_DIR/README.md" | grep -cE '\[!\[.*\]\(https://img\.shields\.io')"
   if [[ "$badge_in_header" -ge 3 ]]; then
     PASS=$((PASS + 1))
     echo "  PASS: $badge_in_header badges found in first 10 lines"
@@ -465,7 +473,7 @@ echo ""
 echo "Test 47: Lens request template has at least 5 H2 sections"
 TOTAL=$((TOTAL + 1))
 if [[ -f "$LENS_TEMPLATE" ]]; then
-  h2_count="$(grep -cP '^## ' "$LENS_TEMPLATE")"
+  h2_count="$(grep -cE '^## ' "$LENS_TEMPLATE")"
   if [[ "$h2_count" -ge 5 ]]; then
     PASS=$((PASS + 1))
     echo "  PASS: lens template has $h2_count H2 sections (>= 5)"

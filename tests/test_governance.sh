@@ -55,8 +55,16 @@ assert_not_contains() {
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
-  if echo "$haystack" | grep -qP "$pattern"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if grep $flags "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -115,7 +123,7 @@ echo ""
 echo "Test 3: GOVERNANCE.md is plain text"
 if [[ -f "$GOVERNANCE" ]]; then
   TOTAL=$((TOTAL + 1))
-  if ! grep -qP '\x00' "$GOVERNANCE" 2>/dev/null && ! grep -qi '<html\|<head\|<body' "$GOVERNANCE"; then
+  if ! file --mime-encoding "$GOVERNANCE" 2>/dev/null | grep -q binary && ! grep -qi '<html\|<head\|<body' "$GOVERNANCE"; then
     PASS=$((PASS + 1))
     echo "  PASS: GOVERNANCE.md is a text file"
   else
@@ -140,7 +148,7 @@ fi
 
 echo ""
 echo "Test 4: GOVERNANCE.md has a top-level Governance heading"
-assert_matches "has Governance heading" "^#\s+Governance" "$governance_content"
+assert_matches "has Governance heading" "^#[[:space:]]+Governance" "$governance_content"
 
 # =====================================================================
 # 4. Project leadership — names maintainer and organization
@@ -152,7 +160,7 @@ assert_contains "mentions @TheMorpheus407" "@TheMorpheus407" "$governance_conten
 
 echo ""
 echo "Test 6: Mentions maintainer name Cedric Moessner"
-assert_matches "mentions Cedric Moessner" "(?i)cedric\s+moessner" "$governance_content"
+assert_matches "mentions Cedric Moessner" "(?i)cedric[[:space:]]+moessner" "$governance_content"
 
 echo ""
 echo "Test 7: Mentions Bootstrap Academy"
@@ -188,23 +196,23 @@ assert_matches "mentions lens domain decisions" "(?i)lens" "$governance_content"
 
 echo ""
 echo "Test 13: Has a Project Leadership section"
-assert_matches "has Project Leadership section" "(?i)##\s+.*(?:project\s+)?leadership" "$governance_content"
+assert_matches "has Project Leadership section" "(?i)##[[:space:]]+.*(project[[:space:]]+)?leadership" "$governance_content"
 
 echo ""
 echo "Test 14: Has a Decision-Making section"
-assert_matches "has Decision-Making section" "(?i)##\s+.*decision" "$governance_content"
+assert_matches "has Decision-Making section" "(?i)##[[:space:]]+.*decision" "$governance_content"
 
 echo ""
 echo "Test 15: Has a Contribution / Contributing section"
-assert_matches "has Contributing section" "(?i)##\s+.*contribut" "$governance_content"
+assert_matches "has Contributing section" "(?i)##[[:space:]]+.*contribut" "$governance_content"
 
 echo ""
 echo "Test 16: Has a Conflict Resolution or Escalation section"
-assert_matches "has Conflict Resolution section" "(?i)##\s+.*(conflict|escalation|dispute|resolution)" "$governance_content"
+assert_matches "has Conflict Resolution section" "(?i)##[[:space:]]+.*(conflict|escalation|dispute|resolution)" "$governance_content"
 
 echo ""
 echo "Test 17: Has an Evolution section"
-assert_matches "has Evolution section" "(?i)##\s+.*evolution" "$governance_content"
+assert_matches "has Evolution section" "(?i)##[[:space:]]+.*evolution" "$governance_content"
 
 # =====================================================================
 # 7. Cross-references to other community health files
@@ -240,7 +248,7 @@ assert_matches "mentions fork right" "(?i)fork" "$governance_content"
 
 echo ""
 echo "Test 23: Mentions GitHub Issues as communication channel"
-assert_matches "mentions GitHub Issues" "(?i)github\s+issues?" "$governance_content"
+assert_matches "mentions GitHub Issues" "(?i)github[[:space:]]+issues?" "$governance_content"
 
 # =====================================================================
 # 10. No conflicting governance files
@@ -276,7 +284,7 @@ echo ""
 echo "Test 25: README.md contains link to GOVERNANCE.md"
 if [[ -f "$README" ]]; then
   TOTAL=$((TOTAL + 1))
-  if echo "$readme_content" | grep -qP '\]\(GOVERNANCE\.md\)'; then
+  if grep -qE '\]\(GOVERNANCE\.md\)' <<< "$readme_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: README contains link to GOVERNANCE.md"
   else
@@ -293,10 +301,10 @@ echo ""
 echo "Test 26: README GOVERNANCE.md link resolves to existing file"
 if [[ -f "$README" ]]; then
   TOTAL=$((TOTAL + 1))
-  if echo "$readme_content" | grep -qP '\]\(GOVERNANCE\.md\)' && [[ -f "$GOVERNANCE" ]]; then
+  if grep -qE '\]\(GOVERNANCE\.md\)' <<< "$readme_content" && [[ -f "$GOVERNANCE" ]]; then
     PASS=$((PASS + 1))
     echo "  PASS: README links to GOVERNANCE.md and file exists"
-  elif ! echo "$readme_content" | grep -qP '\]\(GOVERNANCE\.md\)'; then
+  elif ! echo "$readme_content" | grep -qE '\]\(GOVERNANCE\.md\)'; then
     FAIL=$((FAIL + 1))
     echo "  FAIL: README does not contain GOVERNANCE.md link"
   else
@@ -316,7 +324,7 @@ if [[ -f "$README" ]]; then
   # The governance link should appear near the Contributing/Authors/Security section
   # (between the Contributing heading and the Legal heading)
   community_section="$(sed -n '/^## Contributing/,/^## Legal/p' "$README")"
-  if echo "$community_section" | grep -qP '\]\(GOVERNANCE\.md\)'; then
+  if grep -qE '\]\(GOVERNANCE\.md\)' <<< "$community_section"; then
     PASS=$((PASS + 1))
     echo "  PASS: GOVERNANCE.md link is in the community section of README"
   else
@@ -382,7 +390,7 @@ assert_matches "mentions test requirements" "(?i)test" "$governance_content"
 
 echo ""
 echo "Test 33: Has a Communication section"
-assert_matches "has Communication section" "(?i)##\s+.*communication" "$governance_content"
+assert_matches "has Communication section" "(?i)##[[:space:]]+.*communication" "$governance_content"
 
 # =====================================================================
 # 16. Decision scope — additional items from implementation
@@ -390,7 +398,7 @@ assert_matches "has Communication section" "(?i)##\s+.*communication" "$governan
 
 echo ""
 echo "Test 34: Mentions decision scope — breaking changes"
-assert_matches "mentions breaking changes" "(?i)breaking\s+change" "$governance_content"
+assert_matches "mentions breaking changes" "(?i)breaking[[:space:]]+change" "$governance_content"
 
 echo ""
 echo "Test 35: Mentions decision scope — architecture"
@@ -402,7 +410,7 @@ assert_matches "mentions architecture decisions" "(?i)architecture" "$governance
 
 echo ""
 echo "Test 36: Mentions domain fit as acceptance criterion"
-assert_matches "mentions domain fit" "(?i)domain\s+fit" "$governance_content"
+assert_matches "mentions domain fit" "(?i)domain[[:space:]]+fit" "$governance_content"
 
 # =====================================================================
 # 18. Communication channels — Pull Requests
@@ -410,7 +418,7 @@ assert_matches "mentions domain fit" "(?i)domain\s+fit" "$governance_content"
 
 echo ""
 echo "Test 37: Mentions Pull Requests as communication channel"
-assert_matches "mentions Pull Requests" "(?i)pull\s+request" "$governance_content"
+assert_matches "mentions Pull Requests" "(?i)pull[[:space:]]+request" "$governance_content"
 
 # =====================================================================
 # 19. Transparency — decisions happen in public
@@ -418,7 +426,7 @@ assert_matches "mentions Pull Requests" "(?i)pull\s+request" "$governance_conten
 
 echo ""
 echo "Test 38: Mentions public/transparent decision-making"
-assert_matches "mentions public decisions" "(?i)(in\s+public|transparen)" "$governance_content"
+assert_matches "mentions public decisions" "(?i)(in[[:space:]]+public|transparen)" "$governance_content"
 
 # =====================================================================
 # 20. README — has a Governance heading (not just the link)
@@ -428,7 +436,7 @@ echo ""
 echo "Test 39: README has a Governance heading"
 if [[ -f "$README" ]]; then
   TOTAL=$((TOTAL + 1))
-  if echo "$readme_content" | grep -qP '^## Governance'; then
+  if grep -qE '^## Governance' <<< "$readme_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: README has ## Governance heading"
   else

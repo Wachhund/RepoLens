@@ -54,8 +54,16 @@ assert_not_contains() {
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
-  if echo "$haystack" | grep -qP "$pattern"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if grep $flags "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -117,7 +125,7 @@ echo "Test 6: All 8 modes are documented as modes"
 # not just mentioned as a random word (e.g. "discovery" or "deployment").
 for mode in audit feature bugfix discover deploy custom opensource content; do
   TOTAL=$((TOTAL + 1))
-  if echo "$readme_content" | grep -qP "\`$mode\`"; then
+  if grep -qE "\`$mode\`" <<< "$readme_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: mode '$mode' documented as \`$mode\`"
   else
@@ -240,7 +248,7 @@ for domain in "toolgate" "discovery" "deployment" "open-source-readiness" "conte
   TOTAL=$((TOTAL + 1))
   # Check for domain appearing as a documented domain (in a table row, heading, or backtick-quoted)
   # The domain ID must appear with surrounding formatting: backticks, bold, table cell, or as heading text
-  if echo "$readme_content" | grep -qP "\`$domain\`|\*\*.*${domain_name}.*\*\*|^\|.*${domain_name}.*\|" 2>/dev/null; then
+  if grep -qE "\`$domain\`|\*\*.*${domain_name}.*\*\*|^\|.*${domain_name}.*\|" 2>/dev/null <<< "$readme_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: domain '$domain' ($domain_name) documented"
   else
@@ -327,10 +335,10 @@ while IFS=$'\t' read -r domain_id actual_count domain_name; do
     # Domain not found in any table — skip (covered by Test 26)
     PASS=$((PASS + 1))
     echo "  PASS: domain '$domain_id' ($domain_name) — not in table format (ok, tested elsewhere)"
-  elif echo "$readme_line" | grep -qP "\|\s*${actual_count}\s"; then
+  elif grep -qE "\|[[:space:]]*${actual_count}[[:space:]]" <<< "$readme_line"; then
     PASS=$((PASS + 1))
     echo "  PASS: domain '$domain_id' ($domain_name) shows correct count: $actual_count"
-  elif echo "$readme_line" | grep -qP "${actual_count}\s+lenses"; then
+  elif grep -qE "${actual_count}[[:space:]]+lenses" <<< "$readme_line"; then
     PASS=$((PASS + 1))
     echo "  PASS: domain '$domain_id' ($domain_name) shows correct count: $actual_count lenses"
   else

@@ -55,8 +55,16 @@ assert_not_contains() {
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
-  if echo "$haystack" | grep -qP "$pattern"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if grep $flags "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -127,7 +135,7 @@ echo ""
 echo "Test 3: AUTHORS.md is plain text markdown, not HTML or binary"
 if [[ -f "$AUTHORS" ]]; then
   TOTAL=$((TOTAL + 1))
-  if ! grep -qP '\x00' "$AUTHORS" 2>/dev/null && ! grep -qi '<html\|<head\|<body' "$AUTHORS"; then
+  if ! file --mime-encoding "$AUTHORS" 2>/dev/null | grep -q binary && ! grep -qi '<html\|<head\|<body' "$AUTHORS"; then
     PASS=$((PASS + 1))
     echo "  PASS: AUTHORS.md is a text file"
   else
@@ -203,7 +211,7 @@ assert_contains "mentions TheMorpheus407" "TheMorpheus407" "$authors_content"
 
 echo ""
 echo "Test 9: Credit line includes 'Created and maintained by'"
-assert_matches "created and maintained by" "(?i)created\s+and\s+maintained\s+by" "$authors_content"
+assert_matches "created and maintained by" "(?i)created[[:space:]]+and[[:space:]]+maintained[[:space:]]+by" "$authors_content"
 
 # =====================================================================
 # 4. Bootstrap Academy attribution
@@ -291,7 +299,7 @@ echo ""
 
 echo "Test 22: README contains a reference to AUTHORS.md"
 TOTAL=$((TOTAL + 1))
-if echo "$readme_content" | grep -qP 'AUTHORS'; then
+if grep -qE 'AUTHORS' <<< "$readme_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: README references AUTHORS"
 else
@@ -302,7 +310,7 @@ fi
 echo ""
 echo "Test 23: README contains a Markdown link to AUTHORS.md"
 TOTAL=$((TOTAL + 1))
-if echo "$readme_content" | grep -qP '\]\(AUTHORS\.md\)'; then
+if grep -qE '\]\(AUTHORS\.md\)' <<< "$readme_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: README has Markdown link to AUTHORS.md"
 else
@@ -346,8 +354,8 @@ echo "Test 26: AUTHORS.md email (if present) is consistent with CODE_OF_CONDUCT.
 coc="$SCRIPT_DIR/CODE_OF_CONDUCT.md"
 if [[ -f "$coc" && -f "$AUTHORS" ]]; then
   coc_content="$(cat "$coc")"
-  coc_email="$(echo "$coc_content" | grep -oP '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' | head -1)"
-  authors_email="$(echo "$authors_content" | grep -oP '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' | head -1)"
+  coc_email="$(echo "$coc_content" | grep -oE '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' | head -1)"
+  authors_email="$(echo "$authors_content" | grep -oE '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' | head -1)"
   TOTAL=$((TOTAL + 1))
   if [[ -z "$authors_email" ]]; then
     PASS=$((PASS + 1))
@@ -371,7 +379,7 @@ notice="$SCRIPT_DIR/NOTICE"
 if [[ -f "$notice" && -f "$AUTHORS" ]]; then
   notice_content="$(cat "$notice")"
   TOTAL=$((TOTAL + 1))
-  if echo "$notice_content" | grep -qi "Bootstrap Academy" && echo "$authors_content" | grep -qi "Bootstrap Academy"; then
+  if grep -qi "Bootstrap Academy" <<< "$notice_content" && grep -qi "Bootstrap Academy" <<< "$authors_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: both NOTICE and AUTHORS.md reference Bootstrap Academy"
   elif ! echo "$notice_content" | grep -qi "Bootstrap Academy"; then

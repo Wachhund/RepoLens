@@ -33,11 +33,19 @@ TOTAL=0
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
   # Here-string (not a pipe) because 'set -o pipefail' + 'grep -q' closing
   # stdin early on a large haystack yields SIGPIPE (exit 141), which would
   # make this branch mis-report a successful match as a failure.
-  if grep -qP "$pattern" <<< "$haystack"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if grep $flags "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -83,7 +91,7 @@ echo ""
 # For ordering tests, ignore comment lines (lines starting with optional
 # whitespace then '#') — only the first executable occurrence matters.
 first_code_line() {
-  grep -nP "$1" "$REPOLENS" | grep -vP "^\d+:\s*#" | head -1 | cut -d: -f1
+  grep -nE "$1" "$REPOLENS" | grep -vE "^[0-9]+:[[:space:]]*#" | head -1 | cut -d: -f1
 }
 
 echo "Test 6: BASH_VERSINFO guard appears before first executable 'declare -A'"

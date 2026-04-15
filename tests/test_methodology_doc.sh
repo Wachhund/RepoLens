@@ -54,8 +54,16 @@ assert_not_contains() {
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
-  if echo "$haystack" | grep -qP "$pattern"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if grep $flags "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -130,35 +138,35 @@ assert_matches "labeled as draft, stub, or work-in-progress" "(?i)(draft|stub|wo
 
 echo ""
 echo "Test 5: Section — Abstract"
-assert_matches "has Abstract heading" "(?im)^#{1,3}\s+.*abstract" "$methodology_content"
+assert_matches "has Abstract heading" "(?im)^#{1,3}[[:space:]]+.*abstract" "$methodology_content"
 
 echo ""
 echo "Test 6: Section — Core concept (Lensing / LBA)"
-assert_matches "has Core Concept heading" "(?im)^#{1,3}\s+.*(core concept|lensing|lens.based)" "$methodology_content"
+assert_matches "has Core Concept heading" "(?im)^#{1,3}[[:space:]]+.*(core concept|lensing|lens.based)" "$methodology_content"
 
 echo ""
 echo "Test 7: Section — Why LBA differs from monolithic review"
-assert_matches "has LBA vs monolithic heading" "(?im)^#{1,3}\s+.*(differ|monolithic|vs\.?\s|comparison|versus)" "$methodology_content"
+assert_matches "has LBA vs monolithic heading" "(?im)^#{1,3}[[:space:]]+.*(differ|monolithic|vs\.?[[:space:]]|comparison|versus)" "$methodology_content"
 
 echo ""
 echo "Test 8: Section — DONE x3 streak protocol"
-assert_matches "has DONE streak heading" "(?im)^#{1,3}\s+.*(done|streak)" "$methodology_content"
+assert_matches "has DONE streak heading" "(?im)^#{1,3}[[:space:]]+.*(done|streak)" "$methodology_content"
 
 echo ""
 echo "Test 9: Section — Parallel agent execution"
-assert_matches "has Parallel execution heading" "(?im)^#{1,3}\s+.*(parallel|execution|concurrent)" "$methodology_content"
+assert_matches "has Parallel execution heading" "(?im)^#{1,3}[[:space:]]+.*(parallel|execution|concurrent)" "$methodology_content"
 
 echo ""
 echo "Test 10: Section — Mode isolation"
-assert_matches "has Mode isolation heading" "(?im)^#{1,3}\s+.*(mode|isolation)" "$methodology_content"
+assert_matches "has Mode isolation heading" "(?im)^#{1,3}[[:space:]]+.*(mode|isolation)" "$methodology_content"
 
 echo ""
 echo "Test 11: Section — Future Work"
-assert_matches "has Future Work heading" "(?im)^#{1,3}\s+.*future" "$methodology_content"
+assert_matches "has Future Work heading" "(?im)^#{1,3}[[:space:]]+.*future" "$methodology_content"
 
 echo ""
 echo "Test 12: Section — Citation"
-assert_matches "has Citation heading" "(?im)^#{1,3}\s+.*(citation|credit|attribution)" "$methodology_content"
+assert_matches "has Citation heading" "(?im)^#{1,3}[[:space:]]+.*(citation|credit|attribution)" "$methodology_content"
 
 # =====================================================================
 # 4. Citation content — must credit Cedric Moessner and Bootstrap Academy
@@ -186,7 +194,7 @@ assert_matches "mentions LBA" "(Lens-Based Auditing|LBA)" "$methodology_content"
 
 echo ""
 echo "Test 17: Mentions 'lens' in the context of the methodology"
-assert_matches "mentions lens/lenses" "(?i)\blens(es)?\b" "$methodology_content"
+assert_matches "mentions lens/lenses" "(?i)lens(es)?" "$methodology_content"
 
 # =====================================================================
 # 6. Cross-reference checks — numbers must match codebase
@@ -204,7 +212,7 @@ assert_contains "contains actual domain count ($actual_domain_count)" "$actual_d
 
 echo ""
 echo "Test 20: Mode count — mentions 8 modes"
-assert_matches "mentions 8 modes" "8\s+mode" "$methodology_content"
+assert_matches "mentions 8 modes" "8[[:space:]]+mode" "$methodology_content"
 
 # =====================================================================
 # 7. DONE x3 streak content — section must explain the protocol
@@ -283,7 +291,7 @@ echo ""
 echo "Test 34: METHODOLOGY.md is plain text, not HTML or binary"
 if [[ -f "$METHODOLOGY" ]]; then
   TOTAL=$((TOTAL + 1))
-  if ! grep -qP '\x00' "$METHODOLOGY" 2>/dev/null && ! grep -qi '<html\|<head\|<body' "$METHODOLOGY"; then
+  if ! file --mime-encoding "$METHODOLOGY" 2>/dev/null | grep -q binary && ! grep -qi '<html\|<head\|<body' "$METHODOLOGY"; then
     PASS=$((PASS + 1))
     echo "  PASS: METHODOLOGY.md is a text file"
   else
@@ -298,7 +306,7 @@ fi
 
 echo ""
 echo "Test 35: METHODOLOGY.md has a top-level heading"
-assert_matches "has H1 heading" "(?m)^#\s+" "$methodology_content"
+assert_matches "has H1 heading" "^#[[:space:]]+" "$methodology_content"
 
 echo ""
 echo "Test 36: No conflicting methodology files"
@@ -342,7 +350,7 @@ fi
 echo ""
 echo "Test 38: Document has at least 8 headings (one per required section)"
 if [[ -f "$METHODOLOGY" ]]; then
-  heading_count="$(grep -cP '^#{1,3}\s+' "$METHODOLOGY")"
+  heading_count="$(grep -cE '^#{1,3}[[:space:]]+' "$METHODOLOGY")"
   TOTAL=$((TOTAL + 1))
   if [[ "$heading_count" -ge 8 ]]; then
     PASS=$((PASS + 1))
@@ -462,12 +470,12 @@ REPOLENS_SH="$SCRIPT_DIR/repolens.sh"
 
 echo ""
 echo "Test 51: Safety cap (max iterations) matches source code"
-max_iter="$(grep -oP 'MAX_ITERATIONS_PER_LENS=\K[0-9]+' "$REPOLENS_SH")"
+max_iter="$(grep -oE 'MAX_ITERATIONS_PER_LENS=[0-9]+' "$REPOLENS_SH" | sed 's/MAX_ITERATIONS_PER_LENS=//')"
 assert_contains "contains safety cap value ($max_iter)" "$max_iter iterations" "$methodology_content"
 
 echo ""
 echo "Test 52: Default concurrency limit matches source code"
-max_par="$(grep -oP '^MAX_PARALLEL=\K[0-9]+' "$REPOLENS_SH")"
+max_par="$(grep -oE 'MAX_PARALLEL=[0-9]+' "$REPOLENS_SH" | sed 's/MAX_PARALLEL=//')"
 assert_contains "contains concurrency default ($max_par)" "$max_par simultaneous" "$methodology_content"
 
 # =====================================================================

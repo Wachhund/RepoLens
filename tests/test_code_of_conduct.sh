@@ -55,8 +55,16 @@ assert_not_contains() {
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
-  if echo "$haystack" | grep -qPz "$pattern"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if tr '\n' ' ' <<< "$haystack" | grep $flags "$pattern"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -243,7 +251,7 @@ assert_not_contains "no GitHub issues reporting link" "github.com/TheMorpheus407
 
 echo ""
 echo "Test 30: Enforcement mentions community leaders will review"
-assert_matches "community leaders investigate" "(?i)community leaders[\s\S]*investigate|investigate[\s\S]*complaints" "$coc_content"
+assert_matches "community leaders investigate" "(?i)community leaders.*investigate|investigate.*complaints" "$coc_content"
 
 # =====================================================================
 # 8. Enforcement Guidelines section — CC 2.1 escalation ladder
@@ -271,35 +279,35 @@ assert_contains "Permanent Ban subsection" "### 4. Permanent Ban" "$coc_content"
 
 echo ""
 echo "Test 36: Correction level includes Community Impact"
-assert_matches "Correction has Community Impact" "### 1\. Correction[\s\S]*Community Impact" "$coc_content"
+assert_matches "Correction has Community Impact" "### 1\. Correction.*Community Impact" "$coc_content"
 
 echo ""
 echo "Test 37: Correction level includes Consequence"
-assert_matches "Correction has Consequence" "### 1\. Correction[\s\S]*Consequence" "$coc_content"
+assert_matches "Correction has Consequence" "### 1\. Correction.*Consequence" "$coc_content"
 
 echo ""
 echo "Test 38: Warning level includes Community Impact"
-assert_matches "Warning has Community Impact" "### 2\. Warning[\s\S]*Community Impact" "$coc_content"
+assert_matches "Warning has Community Impact" "### 2\. Warning.*Community Impact" "$coc_content"
 
 echo ""
 echo "Test 39: Warning level includes Consequence"
-assert_matches "Warning has Consequence" "### 2\. Warning[\s\S]*Consequence" "$coc_content"
+assert_matches "Warning has Consequence" "### 2\. Warning.*Consequence" "$coc_content"
 
 echo ""
 echo "Test 40: Temporary Ban level includes Community Impact"
-assert_matches "Temporary Ban has Community Impact" "### 3\. Temporary Ban[\s\S]*Community Impact" "$coc_content"
+assert_matches "Temporary Ban has Community Impact" "### 3\. Temporary Ban.*Community Impact" "$coc_content"
 
 echo ""
 echo "Test 41: Temporary Ban level includes Consequence"
-assert_matches "Temporary Ban has Consequence" "### 3\. Temporary Ban[\s\S]*Consequence" "$coc_content"
+assert_matches "Temporary Ban has Consequence" "### 3\. Temporary Ban.*Consequence" "$coc_content"
 
 echo ""
 echo "Test 42: Permanent Ban level includes Community Impact"
-assert_matches "Permanent Ban has Community Impact" "### 4\. Permanent Ban[\s\S]*Community Impact" "$coc_content"
+assert_matches "Permanent Ban has Community Impact" "### 4\. Permanent Ban.*Community Impact" "$coc_content"
 
 echo ""
 echo "Test 43: Permanent Ban level includes Consequence"
-assert_matches "Permanent Ban has Consequence" "### 4\. Permanent Ban[\s\S]*Consequence" "$coc_content"
+assert_matches "Permanent Ban has Consequence" "### 4\. Permanent Ban.*Consequence" "$coc_content"
 
 # =====================================================================
 # 9. Attribution section — links and version
@@ -397,7 +405,7 @@ echo ""
 echo "Test 51: File is plain text markdown, not HTML or binary"
 if [[ -f "$COC" ]]; then
   TOTAL=$((TOTAL + 1))
-  if ! grep -qP '\x00' "$COC" 2>/dev/null && ! grep -qi '<html\|<head\|<body' "$COC"; then
+  if ! file --mime-encoding "$COC" 2>/dev/null | grep -q binary && ! grep -qi '<html\|<head\|<body' "$COC"; then
     PASS=$((PASS + 1))
     echo "  PASS: CODE_OF_CONDUCT.md is a text file"
   else
@@ -462,7 +470,7 @@ echo "Test 54: README.md links to CODE_OF_CONDUCT.md"
 if [[ -f "$README" ]]; then
   readme_content="$(cat "$README")"
   TOTAL=$((TOTAL + 1))
-  if echo "$readme_content" | grep -qP '\]\(CODE_OF_CONDUCT\.md\)'; then
+  if grep -qE '\]\(CODE_OF_CONDUCT\.md\)' <<< "$readme_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: README links to CODE_OF_CONDUCT.md"
   else
@@ -484,7 +492,7 @@ echo "Test 55: CONTRIBUTING.md links to CODE_OF_CONDUCT.md"
 if [[ -f "$CONTRIBUTING" ]]; then
   contributing_content="$(cat "$CONTRIBUTING")"
   TOTAL=$((TOTAL + 1))
-  if echo "$contributing_content" | grep -qP '\]\(CODE_OF_CONDUCT\.md\)'; then
+  if grep -qE '\]\(CODE_OF_CONDUCT\.md\)' <<< "$contributing_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: CONTRIBUTING.md links to CODE_OF_CONDUCT.md"
   else

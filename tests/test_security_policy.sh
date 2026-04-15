@@ -58,8 +58,16 @@ assert_not_contains() {
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
-  if echo "$haystack" | grep -qP "$pattern"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if grep $flags "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -122,7 +130,7 @@ echo ""
 echo "Test 3: SECURITY.md is plain text markdown, not HTML or binary"
 if [[ -f "$SECURITY" ]]; then
   TOTAL=$((TOTAL + 1))
-  if ! grep -qP '\x00' "$SECURITY" 2>/dev/null && ! grep -qi '<html\|<head\|<body' "$SECURITY"; then
+  if ! file --mime-encoding "$SECURITY" 2>/dev/null | grep -q binary && ! grep -qi '<html\|<head\|<body' "$SECURITY"; then
     PASS=$((PASS + 1))
     echo "  PASS: SECURITY.md is a text file"
   else
@@ -175,7 +183,7 @@ echo "Test 6: No TODO/FIXME/placeholder markers in SECURITY.md"
 TOTAL=$((TOTAL + 1))
 markers_found=0
 if [[ -f "$SECURITY" ]]; then
-  if grep -qP '(TODO|FIXME|\[INSERT)' "$SECURITY"; then
+  if grep -qE '(TODO|FIXME|\[INSERT)' "$SECURITY"; then
     markers_found=1
   fi
 fi
@@ -265,9 +273,9 @@ echo "Test 20: Email is consistent with CODE_OF_CONDUCT.md contact"
 if [[ -f "$COC" ]]; then
   coc_content="$(cat "$COC")"
   TOTAL=$((TOTAL + 1))
-  coc_email="$(echo "$coc_content" | grep -oP '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' | head -1)"
+  coc_email="$(echo "$coc_content" | grep -oE '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' | head -1)"
   if [[ -n "$coc_email" ]]; then
-    if echo "$security_content" | grep -qF "$coc_email"; then
+    if grep -qF "$coc_email" <<< "$security_content"; then
       PASS=$((PASS + 1))
       echo "  PASS: SECURITY.md uses same email ($coc_email) as CODE_OF_CONDUCT.md"
     else
@@ -293,7 +301,7 @@ echo "--- Section 5: Response timeline ---"
 echo ""
 
 echo "Test 21: Acknowledgment timeline is 48 hours (not 72)"
-assert_matches "48-hour acknowledgment" "(?i)48\s*hours" "$security_content"
+assert_matches "48-hour acknowledgment" "(?i)48[[:space:]]*hours" "$security_content"
 
 echo ""
 echo "Test 22: Does NOT promise 72-hour acknowledgment (superseded by 48h)"
@@ -301,7 +309,7 @@ assert_not_contains "no 72h acknowledgment" "72 hours" "$security_content"
 
 echo ""
 echo "Test 23: Assessment/triage timeline includes 1 week or 7 days"
-assert_matches "1-week assessment timeline" "(?i)(1\s*week|7\s*days|one\s*week)" "$security_content"
+assert_matches "1-week assessment timeline" "(?i)(1[[:space:]]*week|7[[:space:]]*days|one[[:space:]]*week)" "$security_content"
 
 echo ""
 echo "Test 24: Has fix/mitigation timeline statement"
@@ -332,12 +340,12 @@ assert_matches "config in scope" "(?i)(config/|configuration)" "$security_conten
 
 echo ""
 echo "Test 29: Out of Scope has its own subsection heading"
-assert_matches "Out of Scope heading" "(?i)###?\s*Out\s*of\s*Scope" "$security_content"
+assert_matches "Out of Scope heading" "(?i)###?[[:space:]]*Out[[:space:]]*of[[:space:]]*Scope" "$security_content"
 
 echo ""
 echo "Test 30: Explicit out-of-scope statement for tool-generated findings"
 TOTAL=$((TOTAL + 1))
-if echo "$security_content" | grep -qiP '(out.of.scope|not.*(in\s*scope|covered|qualif)|findings.*(not|are not|do not)|not.*vulnerabilit.*(in|about|of)\s*(analyzed|third|other|target))'; then
+if grep -qiE '(out.of.scope|not.*(in[[:space:]]*scope|covered|qualif)|findings.*(not|are not|do not)|not.*vulnerabilit.*(in|about|of)[[:space:]]*(analyzed|third|other|target))' <<< "$security_content"; then
   PASS=$((PASS + 1))
   echo "  PASS: has out-of-scope statement"
 else
@@ -359,11 +367,11 @@ echo "--- Section 7: Security considerations ---"
 echo ""
 
 echo "Test 32: Mentions audit mode"
-assert_matches "audit mode documented" "(?i)audit\s*mode" "$security_content"
+assert_matches "audit mode documented" "(?i)audit[[:space:]]*mode" "$security_content"
 
 echo ""
 echo "Test 33: Mentions deploy mode"
-assert_matches "deploy mode documented" "(?i)deploy\s*mode" "$security_content"
+assert_matches "deploy mode documented" "(?i)deploy[[:space:]]*mode" "$security_content"
 
 echo ""
 echo "Test 34: Warns about --dangerously-skip-permissions"
@@ -382,11 +390,11 @@ echo "--- Section 8: Disclosure policy ---"
 echo ""
 
 echo "Test 36: Has coordinated disclosure statement"
-assert_matches "coordinated disclosure" "(?i)coordinated\s*(disclosure|vulnerabilit)" "$security_content"
+assert_matches "coordinated disclosure" "(?i)coordinated[[:space:]]*(disclosure|vulnerabilit)" "$security_content"
 
 echo ""
 echo "Test 37: Asks reporters to give reasonable time before public disclosure"
-assert_matches "reasonable time for fix" "(?i)(reasonable\s*time|before\s*public|responsible)" "$security_content"
+assert_matches "reasonable time for fix" "(?i)(reasonable[[:space:]]*time|before[[:space:]]*public|responsible)" "$security_content"
 
 # =====================================================================
 # 9. What to include in reports
@@ -419,7 +427,7 @@ echo "Test 41: README.md references SECURITY.md"
 if [[ -f "$README" ]]; then
   readme_content="$(cat "$README")"
   TOTAL=$((TOTAL + 1))
-  if echo "$readme_content" | grep -qiP '(SECURITY\.md|security policy|report.*vulnerabilit)'; then
+  if grep -qiE '(SECURITY\.md|security policy|report.*vulnerabilit)' <<< "$readme_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: README references SECURITY.md or security policy"
   else

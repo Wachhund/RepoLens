@@ -67,8 +67,16 @@ assert_not_contains() {
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
-  if echo "$haystack" | grep -qP "$pattern"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if grep $flags "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -417,7 +425,7 @@ if [[ -f "$README" ]]; then
   next_section="$(awk -v start="$adding_start" 'NR > start && /^## / { print NR; exit }' "$README")"
   if [[ -n "$adding_start" && -n "$next_section" ]]; then
     adding_section_content="$(sed -n "${adding_start},${next_section}p" "$README")"
-    if echo "$adding_section_content" | grep -qP 'CONTRIBUTING\.md'; then
+    if grep -qE 'CONTRIBUTING\.md' <<< "$adding_section_content"; then
       PASS=$((PASS + 1))
       echo "  PASS: Adding a Lens section references CONTRIBUTING.md"
     else
@@ -437,7 +445,7 @@ echo ""
 echo "Test 35: Adding a Lens cross-reference is a proper markdown link (not bare text)"
 TOTAL=$((TOTAL + 1))
 if [[ -n "$adding_section_content" ]]; then
-  if echo "$adding_section_content" | grep -qP '\[.*\]\(CONTRIBUTING\.md\)'; then
+  if grep -qE '\[.*\]\(CONTRIBUTING\.md\)' <<< "$adding_section_content"; then
     PASS=$((PASS + 1))
     echo "  PASS: cross-reference uses proper markdown link syntax"
   else

@@ -121,10 +121,10 @@ echo "Test 8: test 14 must use mode-value filtering (select on .mode)"
 # select(.mode != "discover" and .mode != "deploy" and ...)
 # We check for at least the pattern of filtering on .mode field
 TOTAL=$((TOTAL + 1))
-if echo "$test14_area" | grep -qE '\.mode\s*!=\s*"discover"' && \
-   echo "$test14_area" | grep -qE '\.mode\s*!=\s*"deploy"' && \
-   echo "$test14_area" | grep -qE '\.mode\s*!=\s*"opensource"' && \
-   echo "$test14_area" | grep -qE '\.mode\s*!=\s*"content"'; then
+if grep -qE '\.mode\s*!=\s*"discover"' <<< "$test14_area" && \
+   grep -qE '\.mode\s*!=\s*"deploy"' <<< "$test14_area" && \
+   grep -qE '\.mode\s*!=\s*"opensource"' <<< "$test14_area" && \
+   grep -qE '\.mode\s*!=\s*"content"' <<< "$test14_area"; then
   PASS=$((PASS + 1))
   echo "  PASS: test 14 filters by all four known mode values"
 else
@@ -141,7 +141,7 @@ echo "Test 9: test 14 must pass in test_discover_mode.sh"
 test_output="$(bash "$TEST_FILE" 2>&1 || true)"
 test14_result="$(echo "$test_output" | grep -A2 'Test 14:' | head -3)"
 TOTAL=$((TOTAL + 1))
-if echo "$test14_result" | grep -q 'PASS'; then
+if grep -q 'PASS' <<< "$test14_result"; then
   PASS=$((PASS + 1))
   echo "  PASS: test 14 in test_discover_mode.sh passes"
 else
@@ -207,7 +207,7 @@ echo "Test 17: test 14 asserts empty result for non-modal domains"
 # The fix should still assert that the jq result is empty (meaning no unexpected modes)
 # This verifies the test's original purpose is preserved: catching accidental mode fields
 TOTAL=$((TOTAL + 1))
-if echo "$test14_area" | grep -qE 'assert_eq.*""'; then
+if grep -qE 'assert_eq.*""' <<< "$test14_area"; then
   PASS=$((PASS + 1))
   echo "  PASS: test 14 asserts empty string (no unexpected modes)"
 else
@@ -219,7 +219,7 @@ echo ""
 echo "Test 18: test 14 uses assert_eq (not a weaker assertion)"
 # The original and fix should both use assert_eq for a strict equality check
 TOTAL=$((TOTAL + 1))
-if echo "$test14_area" | grep -q 'assert_eq'; then
+if grep -q 'assert_eq' <<< "$test14_area"; then
   PASS=$((PASS + 1))
   echo "  PASS: test 14 uses assert_eq"
 else

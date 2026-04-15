@@ -42,8 +42,16 @@ assert_contains() {
 
 assert_matches() {
   local desc="$1" pattern="$2" haystack="$3"
+  local flags="-qE"
   TOTAL=$((TOTAL + 1))
-  if echo "$haystack" | grep -qP "$pattern"; then
+  if [[ "$pattern" == '(?im)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?im)'}"
+  elif [[ "$pattern" == '(?i)'* ]]; then
+    flags="-qiE"
+    pattern="${pattern#'(?i)'}"
+  fi
+  if grep $flags "$pattern" <<< "$haystack"; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
   else
@@ -180,8 +188,8 @@ echo ""
 
 echo "Test $test_num: negation guard allows !.env.example but blocks other .env negations"
 TOTAL=$((TOTAL + 1))
-filtered_content="$(echo "$gitignore_content" | grep -vP '^!\.env\.example$')"
-if echo "$filtered_content" | grep -qP '^!\.(env|pem|key|p12|jks|keystore|pfx)|^!.*credentials|^!.*secrets'; then
+filtered_content="$(echo "$gitignore_content" | grep -vE '^!\.env\.example$')"
+if grep -qE '^!\.(env|pem|key|p12|jks|keystore|pfx)|^!.*credentials|^!.*secrets' <<< "$filtered_content"; then
   FAIL=$((FAIL + 1))
   echo "  FAIL: found dangerous negation pattern (other than !.env.example)"
 else
@@ -193,7 +201,7 @@ test_num=$((test_num + 1))
 
 echo "Test $test_num: only !.env.example is allowed as a negation — no other .env negations exist"
 TOTAL=$((TOTAL + 1))
-other_env_negations="$(echo "$gitignore_content" | grep -P '^!\.env\.' | grep -vP '^!\.env\.example$' || true)"
+other_env_negations="$(echo "$gitignore_content" | grep -E '^!\.env\.' | grep -vE '^!\.env\.example$' || true)"
 if [[ -z "$other_env_negations" ]]; then
   PASS=$((PASS + 1))
   echo "  PASS: no other .env.* negation patterns found"
