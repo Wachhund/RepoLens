@@ -478,6 +478,48 @@ else
   echo "  FAIL: lens template not found"
 fi
 
+echo ""
+echo "Test 48: DCO file exists at repo root"
+DCO_FILE="$SCRIPT_DIR/DCO"
+TOTAL=$((TOTAL + 1))
+if [[ -f "$DCO_FILE" ]]; then
+  PASS=$((PASS + 1))
+  echo "  PASS: DCO file present"
+else
+  FAIL=$((FAIL + 1))
+  echo "  FAIL: DCO file missing at repo root"
+fi
+
+echo ""
+echo "Test 49: DCO file contains Developer Certificate of Origin 1.1 text"
+if [[ -f "$DCO_FILE" ]]; then
+  dco_content="$(cat "$DCO_FILE")"
+  assert_contains "DCO header present" "Developer Certificate of Origin" "$dco_content"
+  assert_contains "DCO version 1.1 present" "Version 1.1" "$dco_content"
+  assert_contains "DCO clause (a) present" "(a) The contribution was created in whole or in part by me" "$dco_content"
+  assert_contains "DCO clause (d) present" "(d) I understand and agree that this project" "$dco_content"
+fi
+
+echo ""
+echo "Test 50: DCO enforcement workflow exists"
+DCO_WORKFLOW="$SCRIPT_DIR/.github/workflows/dco.yml"
+TOTAL=$((TOTAL + 1))
+if [[ -f "$DCO_WORKFLOW" ]]; then
+  PASS=$((PASS + 1))
+  echo "  PASS: .github/workflows/dco.yml present"
+else
+  FAIL=$((FAIL + 1))
+  echo "  FAIL: DCO enforcement workflow missing at .github/workflows/dco.yml"
+fi
+
+echo ""
+echo "Test 51: DCO workflow triggers on pull_request and checks Signed-off-by"
+if [[ -f "$DCO_WORKFLOW" ]]; then
+  dco_wf_content="$(cat "$DCO_WORKFLOW")"
+  assert_contains "workflow triggers on pull_request" "pull_request:" "$dco_wf_content"
+  assert_contains "workflow checks Signed-off-by trailer" "Signed-off-by:" "$dco_wf_content"
+fi
+
 # --- Summary ---
 echo ""
 echo "================================"

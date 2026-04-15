@@ -1,0 +1,51 @@
+name: DCO
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  dco-check:
+    name: DCO Sign-off Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Verify Signed-off-by on every PR commit
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          commits=$(git rev-list --no-merges "$BASE_SHA".."$HEAD_SHA")
+          if [ -z "$commits" ]; then
+            echo "No non-merge commits in this PR."
+            exit 0
+          fi
+          fail=0
+          for sha in $commits; do
+            author_name=$(git log -1 --format='%an' "$sha")
+            author_email=$(git log -1 --format='%ae' "$sha")
+            expected="Signed-off-by: ${author_name} <${author_email}>"
+            if ! git log -1 --format='%B' "$sha" | grep -qxF "$expected"; then
+              subject=$(git log -1 --format='%s' "$sha")
+              short=$(git log -1 --format='%h' "$sha")
+              echo "::error::Commit ${short} (\"${subject}\") is missing a valid DCO sign-off."
+              echo "  Expected trailer: ${expected}"
+              echo "  Fix: rebase the commit and re-commit with \`git commit -s\` (or \`git commit --amend -s\` for the most recent)."
+              fail=1
+            fi
+          done
+          if [ "$fail" -ne 0 ]; then
+            echo ""
+            echo "See CONTRIBUTING.md \"DCO Sign-Off\" section and https://developercertificate.org/ for details."
+            exit 1
+          fi
+          echo "All PR commits carry a valid Signed-off-by trailer."
