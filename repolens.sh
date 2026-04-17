@@ -126,7 +126,7 @@ Examples:
   repolens.sh --project ~/myapp --agent claude --local --domain security --parallel
 
 Environment:
-  REPOLENS_AGENT_TIMEOUT   Per-invocation agent timeout in seconds (default: 600).
+  REPOLENS_AGENT_TIMEOUT   Per-invocation agent timeout in seconds (default: 6000).
                            Applied to every agent call via timeout(1). On timeout
                            the iteration is logged with [ERROR] and the lens
                            loop continues to the next iteration.
@@ -1031,7 +1031,7 @@ run_lens() {
     local agent_rc=0
     run_agent "$AGENT" "$prompt" "$PROJECT_PATH" >"$output_file" 2>&1 || agent_rc=$?
     if [[ "$agent_rc" -eq 124 ]]; then
-      log_error "[$domain/$lens_id] agent timed out after ${REPOLENS_AGENT_TIMEOUT:-600}s on iteration $iteration"
+      log_error "[$domain/$lens_id] agent timed out after ${REPOLENS_AGENT_TIMEOUT:-6000}s on iteration $iteration"
     elif [[ "$agent_rc" -ne 0 ]]; then
       log_warn "[$domain/$lens_id] Agent returned non-zero on iteration $iteration. Continuing."
     fi
