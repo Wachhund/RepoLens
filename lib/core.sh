@@ -65,28 +65,33 @@ run_agent() {
   local agent="$1"
   local prompt="$2"
   local project_path="$3"
+  local timeout_secs="${REPOLENS_AGENT_TIMEOUT:-600}"
 
   [[ -d "$project_path" ]] || die "Project path does not exist: $project_path"
 
   (
     cd "$project_path" || die "Failed to cd into: $project_path"
+    # Close stdin so agents that fall back to interactive prompts (auth
+    # failure, login wizard) exit quickly instead of blocking on a read
+    # that will never deliver input.
+    exec </dev/null
 
     case "$agent" in
       claude)
-        claude --dangerously-skip-permissions -p "$prompt"
+        timeout "${timeout_secs}s" claude --dangerously-skip-permissions -p "$prompt"
         ;;
       codex)
-        codex exec --yolo "$prompt"
+        timeout "${timeout_secs}s" codex exec --yolo "$prompt"
         ;;
       spark|sparc)
-        codex exec --yolo -m gpt-5.3-codex-spark -c reasoning_effort="xhigh" "$prompt"
+        timeout "${timeout_secs}s" codex exec --yolo -m gpt-5.3-codex-spark -c reasoning_effort="xhigh" "$prompt"
         ;;
       opencode)
-        opencode run "$prompt"
+        timeout "${timeout_secs}s" opencode run "$prompt"
         ;;
       opencode/*)
         local opencode_model="${agent#opencode/}"
-        opencode run -m "$opencode_model" "$prompt"
+        timeout "${timeout_secs}s" opencode run -m "$opencode_model" "$prompt"
         ;;
       *)
         die "Internal error: unsupported agent '$agent'"

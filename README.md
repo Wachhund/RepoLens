@@ -19,6 +19,7 @@
 | `bash` | Yes (4.0+) | Shell runtime — associative arrays, `read -ra`, other 4.x features are used throughout | Linux distributions ship 4.0+ already. macOS ships 3.2 by default (GPLv3 avoidance) — upgrade via `brew install bash`. RepoLens aborts at startup on older bash with an upgrade hint. |
 | `git` | Yes | Repo validation, cloning | OS package manager (`apt install git`, `brew install git`, `nix-env -i git`) |
 | `jq` | Yes | JSON config parsing | OS package manager (`apt install jq`, `brew install jq`, `nix-env -i jq`) |
+| `timeout` (coreutils) | Yes | Per-invocation agent timeout watchdog (see `REPOLENS_AGENT_TIMEOUT` below) | Ships in GNU coreutils. Pre-installed on Linux/NixOS. On macOS: `brew install coreutils`. |
 | `gh` | Yes (unless `--local`) | Create issues, labels, query repos | [cli.github.com](https://cli.github.com) — run `gh auth login` after install |
 | Agent CLI | Yes (at least one) | Run analysis agents | See [Supported Agent CLIs](#supported-agent-clis) below for install + auth per CLI |
 | `docker` + `docker compose` | Only for `--hosted` | DAST scanning environment | OS package manager |
@@ -268,6 +269,12 @@ Usage: repolens.sh --project <path|url> --agent <agent> [OPTIONS]
 | `--version` | Show version and sponsor information, then exit |
 | `--about` | Show tool description and sponsor information, then exit |
 | `-h, --help` | Show help |
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `REPOLENS_AGENT_TIMEOUT` | `600` | Per-invocation agent timeout in seconds. Every agent call is wrapped with `timeout(1)` at this cap — if an agent hangs (stuck network, auth prompt, quota check in flight), the invocation is killed, the iteration is logged with `[ERROR] agent timed out after Ns`, and the lens loop continues. Deploy / content modes with long read cycles may benefit from a higher value (e.g. `REPOLENS_AGENT_TIMEOUT=1800`). |
 
 ## Domains & Lenses (280 total across 27 domains)
 
